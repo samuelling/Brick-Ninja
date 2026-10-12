@@ -84,6 +84,16 @@ h2{font-size:clamp(26px,7vw,38px);color:var(--brick-yellow);text-shadow:0 3px 0 
 .keys b{font-family:var(--font-display);font-weight:400;font-size:12px;background:rgba(0,0,0,.25);padding:2px 6px;border-radius:4px;}
 .small{margin-top:14px;background:none;border:0;color:#ffe2c4;font:600 14px var(--font-body);text-decoration:underline;cursor:pointer;}
 .big-num{font-family:var(--font-display);font-size:30px;color:var(--brick-yellow);}
+.adapt{margin-top:18px;padding:14px 14px 12px;background:rgba(0,0,0,.2);border-radius:6px;text-align:left;}
+.adapt label{display:block;font-weight:700;font-size:15px;}
+.adapt output{font-family:var(--font-display);font-weight:400;color:var(--brick-yellow);font-size:17px;}
+.adapt input[type=range]{display:block;width:100%;margin:10px 0 4px;accent-color:var(--brick-yellow);height:28px;cursor:pointer;}
+.adapt input[type=range]:focus-visible{outline:3px solid #fff;outline-offset:3px;}
+.adapt-ends{display:flex;justify-content:space-between;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#ffd9a8;}
+.card .adapt-note{font-size:13px;margin:8px 0 0;max-width:none;color:#ffe2c4;line-height:1.4;}
+.card .adapt-stats{font-size:13px;margin:8px 0 0;max-width:none;color:#ffe2c4;line-height:1.45;font-variant-numeric:tabular-nums;}
+#stairPlot{display:block;width:100%;margin-top:12px;border-radius:4px;background:#1c1442;}
+.adapt .row{margin-top:4px;gap:20px;}
 
 .levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px;margin-top:22px;text-align:left;}
 .lvl{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0;padding:12px 10px 10px;border:0;border-radius:6px;background:var(--c);color:#fff;cursor:pointer;box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.25);font-family:var(--font-body);text-align:left;}
@@ -125,6 +135,13 @@ h2{font-size:clamp(26px,7vw,38px);color:var(--brick-yellow);text-shadow:0 3px 0 
         <p>A wandering ninja, a village gone dark, and nine guardians holding the shards of the Sun Lantern.</p>
         <div class="row"><button class="play" id="playBtn">Play</button></div>
         <button class="small" id="storyBtn">Watch the story</button>
+        <div class="adapt">
+          <label for="targetSlider">Win about <output id="targetOut" for="targetSlider">80%</output> of fights</label>
+          <input type="range" id="targetSlider" min="50" max="95" step="1" value="80">
+          <div class="adapt-ends"><span>Tougher</span><span>Gentler</span></div>
+          <p class="adapt-note">The game counts every fight and quietly speeds up or slows down its enemies to keep you near this win rate.</p>
+          <div class="row"><button class="small" id="adaptBtn">Adaptive difficulty: on</button></div>
+        </div>
         <div class="keys">Keyboard: <b>←</b> <b>→</b> move · <b>Space</b> jump · <b>Z</b> sword · <b>X</b> star · <b>C</b> bow · <b>P</b> pause · <b>M</b> music</div>
         <div class="row" style="margin-top:6px;gap:20px">
           <button class="small" id="soundBtn1">Sound: on</button>
@@ -156,6 +173,14 @@ h2{font-size:clamp(26px,7vw,38px);color:var(--brick-yellow);text-shadow:0 3px 0 
           <button class="small" id="levelsBtn3">All worlds</button>
           <button class="small" id="soundBtn2">Sound: on</button>
           <button class="small" id="musicBtn2">Music: on</button>
+        </div>
+        <div class="adapt">
+          <label for="targetSlider2">Win about <output id="targetOut2" for="targetSlider2">80%</output> of fights</label>
+          <input type="range" id="targetSlider2" min="50" max="95" step="1" value="80">
+          <div class="adapt-ends"><span>Tougher</span><span>Gentler</span></div>
+          <canvas id="stairPlot" width="600" height="230" aria-label="Difficulty staircase for recent fights"></canvas>
+          <p class="adapt-stats" id="adaptStats"></p>
+          <div class="row"><button class="small" id="adaptBtn2">Adaptive difficulty: on</button><button class="small" id="adaptReset">Reset staircase</button></div>
         </div>
       </div>
     </div>
@@ -902,6 +927,38 @@ let progress = {beaten:{}, best:{}, introSeen:false};
 try { const s = localStorage.getItem('brickNinja.progress'); if (s) progress = Object.assign(progress, JSON.parse(s)); } catch(e){}
 function saveProgress(){ try { localStorage.setItem('brickNinja.progress', JSON.stringify(progress)); } catch(e){} }
 
+/* ---------- adaptive difficulty: a weighted up-down staircase (Kaernbach 1991) ----------
+   Each encounter is a binary trial: beating an enemy (or knocking another sixth off a boss) is a success;
+   getting hit or falling is a failure. One difficulty level D in [0,1] drives the game.
+   After a success D rises by step*(1-p); after a failure it falls by step*p.
+   At equilibrium p*step*(1-p) = (1-p)*step*p, so D settles where P(success) = p, the slider's target.
+   The step shrinks at each reversal (never below a floor) so it settles yet keeps tracking new worlds. */
+const ADAPT = Object.assign({on:true, target:0.8, D:0.3, step:0.12, lastDir:0, reversals:[], trials:[]}, progress.adapt || {});
+const STEP0 = 0.12, STEP_MIN = 0.03, STEP_SHRINK = 0.85;
+const lerpD = (a, b) => a + (b - a)*(ADAPT.on ? ADAPT.D : 0.5);
+const adaptTempo = () => lerpD(0.55, 1.45);
+let adaptSaveT = 0;
+function saveAdapt(){ progress.adapt = {on:ADAPT.on, target:ADAPT.target, D:ADAPT.D, step:ADAPT.step, lastDir:ADAPT.lastDir, reversals:ADAPT.reversals.slice(-12), trials:ADAPT.trials.slice(-120)}; saveProgress(); }
+function adaptTrial(ok, what){
+  if (!ADAPT.on || state !== 'play') return;
+  const p = ADAPT.target, before = ADAPT.D, dir = ok ? 1 : -1;
+  let rev = false;
+  if (ADAPT.lastDir && dir !== ADAPT.lastDir){ rev = true; ADAPT.reversals.push(before); if (ADAPT.reversals.length > 40) ADAPT.reversals.shift(); ADAPT.step = Math.max(STEP_MIN, ADAPT.step*STEP_SHRINK); }
+  ADAPT.lastDir = dir;
+  ADAPT.D = clamp(before + (ok ? ADAPT.step*(1 - p) : -ADAPT.step*p), 0, 1);
+  ADAPT.trials.push({D:before, ok, rev, w:LI});
+  if (ADAPT.trials.length > 400) ADAPT.trials.shift();
+  if (time - adaptSaveT > 2){ adaptSaveT = time; saveAdapt(); }
+}
+function adaptStats(){
+  // with unequal up/down steps, averaging reversal points is biased; the mean level over recent trials is not
+  const t = ADAPT.trials, last = t.slice(-20), win = t.slice(-40);
+  return {n:t.length, rate: last.length ? last.filter(x => x.ok).length/last.length : null, nLast:last.length,
+    thresh: ADAPT.reversals.length >= 4 ? win.reduce((a, x) => a + x.D, 0)/win.length : null, nWin:win.length, nRev:ADAPT.reversals.length};
+}
+function setTarget(v){ ADAPT.target = clamp(v, 0.5, 0.95); syncAdaptUI(); saveAdapt(); }
+function resetAdapt(){ ADAPT.D = 0.3; ADAPT.step = STEP0; ADAPT.lastDir = 0; ADAPT.reversals = []; ADAPT.trials = []; saveAdapt(); syncAdaptUI(); drawStairPlot(); }
+
 /* ---------- input ---------- */
 const input = {left:false,right:false,up:false,down:false,jump:false,throw:false,sword:false,bow:false,jumpQ:0};
 const INPUT_KEYS = ['left','right','up','down','jump','throw','sword','bow'];
@@ -919,6 +976,7 @@ cv.addEventListener('pointermove', e => { if (aimPtr.on && e.pointerId === aimPt
 for (const ev of ['pointerup','pointercancel','lostpointercapture']) cv.addEventListener(ev, e => { if (e.pointerId === aimPtr.id) aimPtr.on = false; });
 const bowBtn = document.querySelector('.btn.bow'); let bowGlow = false;
 addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
   if (state === 'cut'){
     if (e.repeat) return;
     if (e.code === 'Escape'){ e.preventDefault(); skipCut(); }
@@ -1100,7 +1158,8 @@ function spinHits(){
 }
 function hurt(fromX){
   if (P.inv > 0 || P.spin > 0 || state!=='play') return;
-  P.hp--; P.inv = 1.4; sfx.hurt(); shake = 5; P.cling = 0;
+  P.hp--; P.inv = lerpD(2.4, 1.0); sfx.hurt(); shake = 5; P.cling = 0;
+  adaptTrial(false, 'hit');
   const d = P.x + P.w/2 < fromX ? -1 : 1;
   P.vx = d*240; P.vy = L.water ? -180 : -280;
   if (P.hp <= 0) goDown();
@@ -1138,6 +1197,11 @@ function enemyColors(e){
 function damage(e, dir, amt=1){
   if (e.dead) return;
   e.hp -= amt; e.flash = 0.12; clack(2,0.12);
+  if (e.type === 'boss'){
+    // every sixth of a boss's health counts as one won exchange
+    const chunk = Math.floor(clamp((e.max - e.hp)/(e.max/6), 0, 6));
+    while ((e.chunk || 0) < chunk){ e.chunk = (e.chunk || 0) + 1; adaptTrial(true, 'boss'); }
+  } else if (e.hp <= 0) adaptTrial(true, 'kill');
   if (e.type !== 'boss'){ e.vx += dir*90; if (e.type!=='flyer') e.vy = -120; }
   else tone(160,120,0.08,'square',0.04);
   if (e.hp <= 0){
@@ -1402,7 +1466,8 @@ const BOSS = {
 };
 function makeBoss(kind, ax){
   const B = BOSS[kind];
-  const e = {type:'boss', kind, x:LEVEL_END - 180, y:GROUND - B.h, w:B.w, h:B.h, vx:0, vy:0, dir:-1, hp:B.hp, max:B.hp,
+  const hp = Math.max(6, Math.round(B.hp*lerpD(0.6, 1.4)));
+  const e = {type:'boss', kind, x:LEVEL_END - 180, y:GROUND - B.h, w:B.w, h:B.h, vx:0, vy:0, dir:-1, hp, max:hp, chunk:0,
     flash:0, t:0, active:false, arenaX:ax, st:'', st_t:0, onG:false, hidden:false, harm:null, throwA:0, hitEdge:false};
   B.init(e);
   return e;
@@ -1644,7 +1709,7 @@ function raceUpdate(dt, playing){
     for (const sp of pSeg.sprites){
       const hw = RACE_SOLID[sp.kind]; if (!hw) continue;
       if (Math.abs(sp.offset - R.x) < hw + RC.carHalf && R.speed > RC.maxSpeed*0.15){
-        R.speed = RC.maxSpeed*0.12; R.shake = 6; clack(5, 0.2); tone(120, 60, 0.25, 'sawtooth', 0.05); raceMsg('BONK!', '#ffffff');
+        R.speed = RC.maxSpeed*0.12; R.shake = 6; clack(5, 0.2); tone(120, 60, 0.25, 'sawtooth', 0.05); raceMsg('BONK!', '#ffffff'); adaptTrial(false, 'bonk');
         break;
       }
     }
@@ -1665,9 +1730,9 @@ function raceUpdate(dt, playing){
     let target;
     if (c.raijin){
       const gap = c.prog - R.dist;
-      target = RC.maxSpeed*(gap > 25*RC.segL ? 0.78 : gap < -12*RC.segL ? 0.94 : 0.87);
+      target = RC.maxSpeed*(gap > 25*RC.segL ? 0.78 : gap < -12*RC.segL ? 0.94 : 0.87)*lerpD(0.88, 1.08);
       c.tx = Math.sin(c.t*0.45)*0.45;
-    } else target = RC.maxSpeed*c.base;
+    } else target = RC.maxSpeed*c.base*lerpD(0.9, 1.06);
     if (c.spinT > 0) target = RC.maxSpeed*0.3;
     if (R.count > 0 || (!playing && !R.done)) target = 0;
     if (c.finished) target = RC.maxSpeed*0.4;
@@ -1683,7 +1748,7 @@ function raceUpdate(dt, playing){
       c.bumpT = 0.6; R.speed = Math.max(c.speed, R.speed*0.72);
       const side = R.x < c.x ? -1 : 1; R.x += side*0.22; c.x -= side*0.12;
       if (!c.raijin) c.spinT = Math.max(c.spinT, 0.9);
-      clack(3, 0.15); R.shake = 4; raceMsg('BUMP!', '#ffffff');
+      clack(3, 0.15); R.shake = 4; raceMsg('BUMP!', '#ffffff'); adaptTrial(false, 'bump');
     }
   }
   // thrown stars spin out whoever they hit
@@ -1692,7 +1757,7 @@ function raceUpdate(dt, playing){
     for (const c of R.cars){
       if (c.spinT > 0 || Math.abs(c.prog - st.prog) > RC.segL*1.3 || Math.abs(c.x - st.x) > 0.22) continue;
       c.spinT = c.raijin ? 1.2 : 1.6; st.life = 0; clack(3, 0.15); sfx.ting();
-      raceMsg(c.raijin ? 'RAIJIN SPINS!' : 'SPIN OUT!');
+      raceMsg(c.raijin ? 'RAIJIN SPINS!' : 'SPIN OUT!'); adaptTrial(true, 'spin');
       break;
     }
   }
@@ -1703,7 +1768,7 @@ function raceUpdate(dt, playing){
     if (R.boltT <= 0){
       const warn = 1.6;
       R.bolts.push({prog:R.dist + R.playerZ + Math.max(R.speed, RC.maxSpeed*0.5)*(warn + 0.25) + RC.segL*3, x:clamp(R.x, -0.8, 0.8), t:0, warn, hit:false, struck:false});
-      R.boltT = (R.finalLap ? 3.6 : 4.8) + Math.random()*1.8;
+      R.boltT = ((R.finalLap ? 3.6 : 4.8) + Math.random()*1.8)/adaptTempo();
     }
   }
   for (const b of R.bolts){
@@ -1711,7 +1776,7 @@ function raceUpdate(dt, playing){
     if (b.t >= b.warn && !b.struck){ b.struck = true; R.flash = Math.max(R.flash, 0.5); sfx.zap(); }
     if (b.struck && b.t < b.warn + 1.2 && !b.hit && R.hopT <= 0 && R.spinT <= 0 && racing){
       const d = b.prog - (R.dist + R.playerZ);
-      if (Math.abs(d) < RC.segL*1.5 && Math.abs(b.x - R.x) < 0.3){ b.hit = true; R.spinT = 1; R.speed *= 0.45; R.shake = 7; raceMsg('ZAPPED!', '#fff27a'); tone(1800, 80, 0.3, 'sawtooth', 0.06); }
+      if (Math.abs(d) < RC.segL*1.5 && Math.abs(b.x - R.x) < 0.3){ b.hit = true; R.spinT = 1; R.speed *= 0.45; R.shake = 7; raceMsg('ZAPPED!', '#fff27a'); adaptTrial(false, 'zap'); tone(1800, 80, 0.3, 'sawtooth', 0.06); }
     }
   }
   R.bolts = R.bolts.filter(b => b.t < b.warn + 1.5);
@@ -1721,7 +1786,12 @@ function raceUpdate(dt, playing){
     R.lap = lap;
     if (lap === RC.laps){ R.finalLap = true; raceMsg('FINAL LAP!', '#ff6a3a'); musicPlay('boss'); } else raceMsg('LAP ' + lap);
   }
-  if (!R.done) R.rank = 1 + R.cars.filter(c => c.prog > R.dist).length;
+  if (!R.done){
+    const rank = 1 + R.cars.filter(c => c.prog > R.dist).length;
+    if (R.count <= 0 && rank < R.rank) adaptTrial(true, 'pass');
+    else if (R.count <= 0 && rank > R.rank) adaptTrial(false, 'passed');
+    R.rank = rank;
+  }
   if (!R.done && R.dist >= total){
     R.done = true; R.won = R.rank === 1; R.finT = 0;
     musicStop();
@@ -2048,6 +2118,7 @@ function update(dt){
   if (L.race){ bannerT = Math.max(0, bannerT - dt); raceUpdate(dt, state === 'play'); return; }
   if (shardFx) shardFx.t += dt;
   const playing = state === 'play';
+  const dtE = dt*adaptTempo();
   bannerT = Math.max(0, bannerT - dt);
 
   // moving platforms: sliding, elevators and turning wheels
@@ -2069,7 +2140,7 @@ function update(dt){
     else if (s.cst === 'fall'){ s.fvy += G*dt; s.fy += s.fvy*dt; if (s.y + s.fy > H + 40){ s.cst = 'gone'; s.ct = 3; } }
     else if (s.cst === 'gone'){ s.ct -= dt; if (s.ct <= 0){ s.cst = 'idle'; s.off = false; s.fy = 0; s.pop = 0.4; } }
   }
-  updateMechanics(dt, playing);
+  updateMechanics(dtE, playing);
 
   if (playing){
     if (P.onG && P.under && P.under.mover){ P.x += P.under.dx; P.y += P.under.dy; }
@@ -2163,13 +2234,14 @@ function update(dt){
     const fell = L.lava ? (P.y + P.h > H - 20) : (P.y > H + 80);
     if (fell){
       if (L.lava){ burst(P.x + P.w/2, H - 22, ['#ff8a1f','#ffd23f','#e0441a'], 10, 0.8); tone(300,80,0.3,'sawtooth',0.06); }
-      P.hp--; sfx.hurt();
+      P.hp--; sfx.hurt(); adaptTrial(false, 'fall');
       if (P.hp <= 0){ P.hp = 0; P.y = H + 80; goDown(); }
       else { P.x = P.safeX; P.y = P.safeY - 20; P.vx = 0; P.vy = 0; P.inv = 1.6; P.cling = 0; }
     }
   }
 
-  // enemies
+  // enemies run on the adaptive enemy clock
+  { const dt = dtE;
   for (const e of enemies){
     if (e.dead) continue;
     if (e.type !== 'boss' && e.type !== 'clone' && Math.abs(e.x - P.x) > W*1.3) continue;
@@ -2236,6 +2308,8 @@ function update(dt){
     if (playing && !e.hidden && !e.calm && overlap(P, e)) hurt(e.x + e.w/2);
   }
 
+  }
+
   // player stars
   for (const s of stars){
     s.x += s.vx*dt; s.y += s.vy*dt; s.rot += dt*22; s.life -= dt;
@@ -2296,6 +2370,7 @@ function update(dt){
   arrows = arrows.filter(a => a.life > 0);
 
   // enemy projectiles
+  { const dt = dtE;
   for (const f of foes){
     if (f.dead) continue;
     f.life -= dt; if (f.life <= 0){ f.dead = true; continue; }
@@ -2316,8 +2391,10 @@ function update(dt){
     }
   }
   foes = foes.filter(f => !f.dead);
+  }
 
   // hazards
+  { const dt = dtE;
   for (const h of hazards){
     h.t += dt;
     if (h.kind === 'mark'){
@@ -2342,8 +2419,10 @@ function update(dt){
     }
   }
   hazards = hazards.filter(h => !h.dead);
+  }
 
   // lava fireballs
+  { const dt = dtE;
   for (const b of lavaballs){
     if (Math.abs(b.x - P.x) > W) continue;
     if (!b.up){ b.timer -= dt; if (b.timer <= 0){ b.up = true; b.y = H + 10; b.vy = -640 - Math.random()*60; } }
@@ -2352,6 +2431,8 @@ function update(dt){
       if (b.y > H + 20 && b.vy > 0){ b.up = false; b.timer = 1.6 + Math.random()*1.6; }
       if (playing && overlap(P, {x:b.x-9, y:b.y-9, w:18, h:18})) hurt(b.x);
     }
+  }
+
   }
 
   // debris
@@ -3980,6 +4061,7 @@ function pauseGame(){
   if (state !== 'play') return;
   state = 'pause'; $('pauseName').textContent = `World ${LI+1}: ${L.name}`;
   $('pauseScreen').hidden = false;
+  saveAdapt(); updateAdaptStats(); drawStairPlot();
   for (const k of INPUT_KEYS) input[k] = false; aimPtr.on = false;
   if (AC) AC.suspend();
 }
@@ -3994,7 +4076,7 @@ function levelComplete(){
   const lastLevel = LI === LEVELS.length - 1;
   progress.beaten[L.id] = true;
   progress.best[L.id] = Math.max(progress.best[L.id] || 0, studCount);
-  saveProgress();
+  saveAdapt();
   if (lastLevel){ playEnding(); return; }
   const found = LEVELS.filter(lv => progress.beaten[lv.id]).length;
   $('winEyebrow').textContent = L.race ? 'Raijin outraced' : `${L.bossName} smashed`;
@@ -4005,6 +4087,60 @@ function levelComplete(){
   $('nextBtn').textContent = 'Next world';
   $('winScreen').hidden = false;
 }
+function syncAdaptUI(){
+  const v = Math.round(ADAPT.target*100);
+  for (const [sl, out] of [['targetSlider','targetOut'],['targetSlider2','targetOut2']]){ $(sl).value = v; $(out).textContent = v + '%'; }
+  for (const id of ['adaptBtn','adaptBtn2']) $(id).textContent = 'Adaptive difficulty: ' + (ADAPT.on ? 'on' : 'off');
+  $('targetSlider').disabled = $('targetSlider2').disabled = !ADAPT.on;
+}
+function drawStairPlot(){
+  const c = $('stairPlot'), x = c.getContext('2d'), dpr = Math.min(3, window.devicePixelRatio || 1);
+  const w = c.clientWidth || 300, h = Math.round(w*0.46);
+  c.width = Math.round(w*dpr); c.height = Math.round(h*dpr); c.style.height = h + 'px';
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const L0 = 34, R0 = 10, T0 = 14, B0 = 22, pw = w - L0 - R0, ph = h - T0 - B0;
+  x.fillStyle = '#1c1442'; x.fillRect(0, 0, w, h);
+  const st = adaptStats(), tr = ADAPT.trials.slice(-60), n = tr.length;
+  x.font = '600 11px Fredoka, sans-serif'; x.textBaseline = 'middle';
+  if (!n){ x.fillStyle = '#fff6e3'; x.font = '600 13px Fredoka, sans-serif'; x.textAlign = 'center'; x.fillText('Play a little and the staircase draws itself here.', w/2, h/2); return; }
+  // zoom the level axis to the data, in steps of 0.1
+  const vals = tr.map(t => t.D).concat([ADAPT.D], st.thresh === null ? [] : [st.thresh]);
+  let lo = Math.max(0, Math.floor((Math.min(...vals) - 0.05)*10)/10), hi = Math.min(1, Math.ceil((Math.max(...vals) + 0.05)*10)/10);
+  if (hi - lo < 0.3){ const m = (hi + lo)/2; lo = Math.max(0, m - 0.15); hi = Math.min(1, lo + 0.3); lo = Math.max(0, hi - 0.3); }
+  const Y = d => T0 + (1 - (d - lo)/(hi - lo))*ph, X = i => L0 + 6 + i*(pw - 12)/Math.max(1, n);
+  const tick = hi - lo > 0.5 ? 0.2 : 0.1;
+  for (let d = Math.ceil(lo/tick - 1e-6)*tick; d <= hi + 1e-6; d += tick){
+    x.strokeStyle = 'rgba(255,255,255,0.12)'; x.lineWidth = 1; x.beginPath(); x.moveTo(L0, Y(d)); x.lineTo(w - R0, Y(d)); x.stroke();
+    x.fillStyle = '#c9bde8'; x.textAlign = 'right'; x.fillText(d.toFixed(1), L0 - 6, Y(d));
+  }
+  x.fillStyle = '#c9bde8'; x.textAlign = 'left'; x.fillText('harder ↑', L0 + 4, T0 - 4);
+  x.textAlign = 'center'; x.fillText(`last ${n} fights`, L0 + pw/2, h - 9);
+  if (st.thresh !== null){
+    x.setLineDash([5, 4]); x.strokeStyle = '#f7c51e'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(L0, Y(st.thresh)); x.lineTo(w - R0, Y(st.thresh)); x.stroke(); x.setLineDash([]);
+  }
+  // the staircase holds each level until the next fight, then steps
+  x.strokeStyle = '#fff6e3'; x.lineWidth = 1.8; x.beginPath();
+  tr.forEach((t, i) => { if (i === 0) x.moveTo(X(i), Y(t.D)); else { x.lineTo(X(i), Y(tr[i - 1].D)); x.lineTo(X(i), Y(t.D)); } });
+  x.lineTo(X(n), Y(tr[n - 1].D)); x.lineTo(X(n), Y(ADAPT.D)); x.stroke();
+  tr.forEach((t, i) => {
+    if (t.rev){ x.strokeStyle = '#ffffff'; x.lineWidth = 1.5; x.beginPath(); x.arc(X(i), Y(t.D), 6, 0, 7); x.stroke(); }
+    x.fillStyle = t.ok ? '#4cc160' : '#e84646'; x.beginPath(); x.arc(X(i), Y(t.D), 3.4, 0, 7); x.fill();
+  });
+  x.fillStyle = '#f7c51e'; x.beginPath(); x.arc(X(n), Y(ADAPT.D), 4.5, 0, 7); x.fill();
+}
+function updateAdaptStats(){
+  const st = adaptStats(), el = $('adaptStats');
+  if (!ADAPT.on){ el.textContent = 'Adaptive difficulty is off, so enemies run at normal speed.'; return; }
+  const parts = [];
+  parts.push(st.rate === null ? 'No fights yet' : `Won ${Math.round(st.rate*100)}% of the last ${st.nLast} fights (target ${Math.round(ADAPT.target*100)}%)`);
+  parts.push(`difficulty now ${ADAPT.D.toFixed(2)}`);
+  parts.push(st.thresh === null ? `estimate starts after 4 reversals (${st.nRev} so far)` : `threshold estimate ${st.thresh.toFixed(2)} (mean level, last ${st.nWin} fights)`);
+  el.textContent = parts.join(' · ') + '. Green dots are wins, red are hits, rings mark reversals, the dashed line is the estimate.';
+}
+for (const sl of ['targetSlider','targetSlider2']) $(sl).addEventListener('input', e => { setTarget(e.target.value/100); if (state === 'pause'){ updateAdaptStats(); drawStairPlot(); } });
+for (const id of ['adaptBtn','adaptBtn2']) $(id).addEventListener('click', () => { ADAPT.on = !ADAPT.on; saveAdapt(); syncAdaptUI(); updateAdaptStats(); drawStairPlot(); });
+$('adaptReset').addEventListener('click', () => { resetAdapt(); updateAdaptStats(); });
+syncAdaptUI();
 $('playBtn').addEventListener('click', () => { audioInit(); if (!progress.introSeen) playIntro(() => startLevel(0)); else showLevels(); });
 $('storyBtn').addEventListener('click', () => { audioInit(); playIntro(showLevels); });
 $('endingBtn').addEventListener('click', () => { audioInit(); playEnding(); });

@@ -28,6 +28,16 @@ Landing on a bad guy smashes it and bounces you off in a spinning sword slash th
 
 **In the race:** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or bow button uses turbo. Studs on the road refill the turbo meter.
 
+## Adaptive difficulty
+
+The title and pause screens have a slider for the win rate the game should aim for, from 50% (tougher) to 95% (gentler). A weighted up-down staircase (Kaernbach, 1991) then tunes one difficulty level, D from 0 to 1, to hold you at that rate:
+
+- **Trials:** beating an enemy, knocking another sixth off a boss's health, passing a racer or spinning one out counts as a success. Getting hit, falling, crashing, being zapped or being passed counts as a failure.
+- **Update rule:** after a success, D rises by step × (1 − p); after a failure, it falls by step × p, where p is the target. The level settles where your success rate equals p. The step starts at 0.12, shrinks by 15% at each reversal, and stops at 0.03 so it keeps tracking as worlds change.
+- **What D controls:** a shared clock for enemies, their projectiles, boss attacks, hazard warnings and moving traps (0.55× to 1.45× speed). It also sets how long you stay safe after a hit (2.4 s down to 1.0 s), boss health (0.6× to 1.4×), and the pace of the race rivals.
+
+The pause screen plots the last 60 fights as a staircase: green dots are wins, red are hits, rings mark reversals, and the dashed line is the threshold estimate (the mean level over the last 40 fights, since averaging reversal points is biased when the up and down steps differ). Against a simulated player with a logistic psychometric function, the observed win rate converged to within about 1 point of targets from 60% to 95%. The staircase state is saved in the browser and can be reset from the pause screen.
+
 ## Worlds
 
 New mechanics build up as the game goes on.
