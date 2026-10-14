@@ -2,7 +2,7 @@
 
 A side-scrolling ninja game built from bricks. Game idea by Everett.
 
-A wandering ninja comes to the village of Ishimura, where the Shadow Master has cut the Sun Lantern into nine shards and handed them to his nine guardians. Fight and race through nine worlds, beat each guardian, and bring the light home. The story is told Kurosawa-style: black-and-white storms, hard wipes between shots, taiko drums, and an ending that turns the whole village back to color.
+A wandering ninja comes to the village of Ishimura, where the Shadow Master has cut the Sun Lantern into ten shards and handed them to his ten guardians. Fight, climb and race through ten worlds, beat each guardian, and bring the light home. The story is told Kurosawa-style: black-and-white storms, hard wipes between shots, taiko drums, and an ending that turns the whole village back to color.
 
 **Play:** https://samuelling.github.io/Brick-Ninja/
 
@@ -29,9 +29,21 @@ Landing on a bad guy smashes it and bounces you off in a spinning sword slash th
 
 **In the race:** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
 
-## Bonus world: Dragon Falls
+## World 9: Dragon Falls
 
-A vertical climb up a waterfall, like the Waterfall stage in Contra. Ledges zig-zag up between two walls too slick to cling to; some crumble, some slide, and guards and birds wait along the way. Drop a long way below your last safe ledge and it counts as a fall. At the top, the Stone Oni floats over the arena: it spits fans of fire, and its two stone fists take aim (watch for the shadow) and slam down. Point the d-pad up to throw stars at its head, or jump from the side ledges and stomp it. Dragon Falls sits outside the nine-shard story, so it doesn't change the ending.
+A vertical climb up a waterfall, like the Waterfall stage in Contra. Ledges zig-zag up between two walls too slick to cling to; some crumble, some slide, and guards and birds wait along the way. Drop a long way below your last safe ledge and it counts as a fall. At the top, the Stone Oni floats over the arena: it spits fans of fire, and its two stone fists take aim (watch for the shadow) and slam down. Point the d-pad up to throw stars at its head, or jump from the side ledges and stomp it. Its music is neoclassical metal in the Yngwie mould: sweep-picked arpeggios up and down three octaves, pedal-point riffs, harmonic minor runs and a diminished arpeggio spinning over the dominant, over double-kick drums.
+
+## Playing together online
+
+Up to four ninjas can play the same world at once, each on their own phone, tablet or computer. Tap **Play together**, type a name, and **Make a room**. You get a four-letter code; friends tap **Play together**, type the code and **Join** (or open the link from **Send friends a link**). Anyone in the room can pick a world, and it starts for everyone. A friend who joins mid-world drops straight in.
+
+- Everyone plays the same world with their own ninja, in their own colour, with names over their heads, little arrows pointing to friends who are off the screen, and everyone's hearts in the corner.
+- Bad guys go after whichever ninja is closest. The more ninjas, the more bad guys: half again as many for each extra player, and bosses get 60% more health per extra player.
+- Opening a secret door is shared, and when anyone walks through one, everyone goes in together, side by side. If you're knocked out in a secret room you wait while your friends finish; the room only fails if everyone is knocked out. Everyone who's inside wins the weapon.
+- The difficulty staircase becomes a team staircase: every ninja's wins and hits count toward one shared difficulty level.
+- Pausing opens the menu, but the world keeps going for everyone else. Thunder Road is raced on your own.
+
+**How it works.** The game connects to a small relay server on Cloudflare (the same Durable Object server Crush Commando uses), which only passes messages around a room. Everyone runs the whole game. In each world, the earliest joiner who's playing it is the *authority*: its enemies, boss and secret room are the real ones, and it sends a snapshot of them ten times a second. Everyone else steers their copy toward the snapshot and sends their hits to the authority; each player checks their own ninja's bumps. If the authority leaves, the next earliest joiner takes over. To use a different server, add `?server=wss://your-server` to the game's address.
 
 ## Secret doors and special weapons
 
@@ -73,8 +85,8 @@ New mechanics build up as the game goes on.
 | 6 | Desert Ruins | Moving platforms, quicksand | Scorpion King | NES ninja action |
 | 7 | Thunder Road | A third-person kart race | Raijin the Thunder Rider | Power metal |
 | 8 | Cloud Castle | Springs, wind gusts, turning platform wheels | Storm Eagle | Heroic NES |
-| 9 | Shadow Fortress | Darkness, spikes, crushers, elevators | Shadow Master | Power metal |
-| ★ | Dragon Falls (bonus) | A vertical climb | Stone Oni | Heroic NES |
+| 9 | Dragon Falls | A vertical climb up a waterfall | Stone Oni | Neoclassical shred |
+| 10 | Shadow Fortress | Darkness, spikes, crushers, elevators | Shadow Master | Power metal |
 
 All the music is original and synthesized in the browser. Every world is open from the start. Cleared worlds and the story progress are saved in the browser.
 
