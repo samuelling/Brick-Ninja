@@ -1833,6 +1833,7 @@ function tryStomp(fallV, prevBottom){
   for (const e of enemies){
     if (!hittable(e) || !overlap(P, e)) continue;
     if (prevBottom > e.y + 10 + fallV/60) continue;
+    if (e.type === 'boss'){ if (time < (e.stompCd || 0)) continue; e.stompCd = time + 1.4; }
     stomp(e); return;
   }
 }
@@ -1863,7 +1864,9 @@ function goDown(){
   state = 'down';
   const race = !!L.race;
   document.getElementById('downTitle').textContent = race ? 'So close!' : 'Ouch!';
-  document.getElementById('downText').textContent = race ? 'Raijin crossed the line first. Throw stars to spin him out, grab studs for turbo, and race him again.' : 'Your ninja got bonked. Grab your hearts back and keep going.';
+  const bossFight = !race && boss && boss.active && !boss.dead && !(NET.on && NET.peers.size);
+  document.getElementById('downText').textContent = race ? 'Raijin crossed the line first. Throw stars to spin him out, grab studs for turbo, and race him again.'
+    : bossFight ? `The ${L.bossName} got its strength back. Grab your hearts and fight it again!` : 'Your ninja got bonked. Grab your hearts back and keep going.';
   document.getElementById('continueBtn').textContent = race ? 'Race again' : 'Keep going';
   setTimeout(() => { if (state === 'down') document.getElementById('downScreen').hidden = false; }, 500);
 }
@@ -1891,6 +1894,11 @@ function enemyColors(e){
 }
 function damage(e, dir, amt=1){
   if (e.dead) return;
+  if (e.type === 'boss'){
+    if (time < (e.ifUntil || 0)) return;
+    e.ifUntil = time + 0.2/NP();
+    amt = Math.max(1, Math.round(amt*0.5));
+  }
   if (NET.on && NET.peers.size && !NET.remote && !amAuth()){
     const a = authPeer();
     if (a) netEv(e.type === 'clone' ? {k:'hit', gen:NET.gen, c:e.cid, a:amt, d:dir} : {k:'hit', gen:NET.gen, i:enemies.indexOf(e), a:amt, d:dir}, a.id);
@@ -2267,7 +2275,8 @@ const BOSS = {
 };
 function makeBoss(kind, ax){
   const B = BOSS[kind];
-  const hp = Math.max(6, Math.round(B.hp*lerpD(0.6, 1.4)*(1 + 0.6*(NP() - 1))*(1 + 0.25*worldProg())));
+  // nearly twice the old health, a wider swing with the adaptive level, and up to 40% more by the last world
+  const hp = Math.max(10, Math.round(B.hp*1.8*lerpD(0.7, 1.6)*(1 + 0.6*(NP() - 1))*(1 + 0.4*worldProg())));
   const e = {type:'boss', kind, x:LEVEL_END - 180, y:GROUND - B.h, w:B.w, h:B.h, vx:0, vy:0, dir:-1, hp, max:hp, chunk:0,
     flash:0, t:0, active:false, arenaX:ax, st:'', st_t:0, onG:false, hidden:false, harm:null, throwA:0, hitEdge:false};
   B.init(e);
@@ -3115,7 +3124,7 @@ function update(dt){
         } else { if (B.idle) B.idle(e, dt); else bossGround(e, dt); continue; }
       }
       e.harm = null;
-      B.update(e, dt);
+      B.update(e, dt*(1.05 + 0.35*(1 - e.hp/e.max)));
       P = ME;
       if (playing && e.harm) for (const r of e.harm) if (overlap(P, r)) hurt(r.x + r.w/2);
     }
@@ -6134,6 +6143,11 @@ $('continueBtn').addEventListener('click', () => {
   if (L.race){ beginLevel(LI); return; }
   P.hp = 5; P.inv = 2; P.vx = 0; P.vy = 0; P.cling = 0;
   if (L.vertical ? P.y > P.safeY + 60 : P.y > H - 30) { P.x = P.safeX; P.y = P.safeY - 20; }
+  if (boss && boss.active && !boss.dead && !(NET.on && NET.peers.size)){
+    // lost to the boss: it heals, and you start the fight again from the arena's edge
+    boss.hp = boss.max; boss.chunk = 0; boss.flash = 0;
+    P.x = boss.arenaX + 30; P.y = GROUND - P.h - 2; P.face = 1;
+  }
   foes = []; hazards = [];
   hideAll(); state = 'play'; audioInit();
   musicPlay(boss.active && !boss.dead ? 'boss' : L.song);

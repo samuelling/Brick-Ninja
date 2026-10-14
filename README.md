@@ -25,7 +25,7 @@ The whole game is one file, `index.html`, with no build step. It runs on phones 
 | Pause | II | P or Esc |
 | Music on/off | Title or pause screen | M |
 
-Landing on a bad guy smashes it and bounces you off in a spinning sword slash that hits anything nearby. Landing on a boss knocks off two points of health. Golden bricks give triple stars for a while.
+Landing on a bad guy smashes it and bounces you off in a spinning sword slash that hits anything nearby. Landing on a boss knocks off a point of health (once every 1.4 seconds). Golden bricks give triple stars for a while.
 
 **In the race (four laps):** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
 
@@ -82,6 +82,16 @@ Worlds get longer as the game goes on: about 8,400 wide in Sunset Temple, about 
 - Dragon Falls is a taller climb, and its ledges get narrower, wobblier and more likely to crumble the higher you go.
 
 The adaptive difficulty below still tunes the bad guys' speed to your win rate, but pits, cliffs and spikes aren't tuned, so the later worlds really are harder.
+
+## Bosses
+
+Bosses are built to be a real fight:
+
+- They have nearly twice their old health, more again with each extra player online, and up to 40% more by the last world.
+- Big hits do half damage to a boss: the sword, stomps, missiles, the laser and the thunder chain all hit a boss for half (at least 1). After each hit, a boss is armoured for a split second (a fifth of a second, shared between players online), so firing everything at once doesn't melt it.
+- A boss can only be stomped once every 1.4 seconds, so you can't bounce on its head forever.
+- Bosses speed up as they weaken, up to about 40% faster near the end of the fight.
+- Get knocked out in a boss fight (playing alone) and the boss gets all its health back; **Keep going** puts you at the edge of the arena to fight it again.
 
 ## Adaptive difficulty
 
