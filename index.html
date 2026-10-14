@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1c1442">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Brick Ninja</title>
@@ -26,6 +26,7 @@
 [hidden]{display:none!important;}
 body{margin:0;}
 html,body{height:100%;}
+html{touch-action:none;-webkit-text-size-adjust:100%;}
 body{background:var(--night);color:var(--ink);font-family:var(--font-body);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
 #app{position:fixed;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);left:0;right:0;display:flex;flex-direction:column;}
 #stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;}
@@ -37,6 +38,8 @@ canvas{display:block;image-rendering:auto;}
 .pad{display:flex;gap:12px;align-items:flex-end;}
 .btn{pointer-events:auto;position:relative;width:70px;height:62px;border:0;border-radius:6px;font-family:var(--font-display);font-size:15px;letter-spacing:.04em;color:var(--ink);background:var(--brick-blue);box-shadow:inset 0 -6px 0 rgba(0,0,0,.28),inset 0 2px 0 rgba(255,255,255,.25);opacity:.82;touch-action:none;display:grid;place-items:center;margin-top:9px;}
 .btn::before{content:"";position:absolute;top:-8px;left:9px;right:9px;height:8px;border-radius:3px 3px 0 0;background:repeating-linear-gradient(90deg,var(--stud,#3f8be6) 0 20px,transparent 20px 32px);}
+/* a wider invisible hit area, so a tap on a rounded corner or just beside a button still lands on it (Safari otherwise reads two such taps as a zoom) */
+.btn::after{content:"";position:absolute;inset:-8px;}
 .btn.on{transform:translateY(3px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);opacity:1;}
 .btn.jump{background:#2f9e44;--stud:#4cc160;width:78px;}
 .btn.throw{background:var(--brick-red);--stud:#ec4a4a;width:76px;height:68px;}
@@ -45,6 +48,20 @@ canvas{display:block;image-rendering:auto;}
 .btn.special.empty{color:rgba(255,246,227,.55);}
 .btn.special svg{width:32px;height:32px;}
 .btn svg{width:26px;height:26px;}
+/* 8-way d-pad: one square touch area, two crossed bricks; touch a corner for a diagonal */
+.dpad{pointer-events:auto;position:relative;width:150px;height:150px;touch-action:none;opacity:.82;flex:none;}
+.dpad .arm{position:absolute;background:var(--brick-blue);border-radius:6px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.28),inset 0 2px 0 rgba(255,255,255,.25);}
+.dpad .arm.h{left:0;right:0;top:50px;height:50px;}
+.dpad .arm.v{top:0;bottom:0;left:50px;width:50px;}
+.dpad .hub{position:absolute;left:58px;top:58px;width:34px;height:34px;border-radius:50%;background:#1658a8;box-shadow:inset 0 2px 0 rgba(0,0,0,.25);}
+.dpad .ar{position:absolute;width:0;height:0;border:11px solid transparent;opacity:.85;transition:opacity .05s;}
+.dpad .ar.u{left:64px;top:8px;border-bottom:14px solid var(--ink);border-top:0;}
+.dpad .ar.d{left:64px;bottom:8px;border-top:14px solid var(--ink);border-bottom:0;}
+.dpad .ar.l{top:64px;left:8px;border-right:14px solid var(--ink);border-left:0;}
+.dpad .ar.r{top:64px;right:8px;border-left:14px solid var(--ink);border-right:0;}
+.dpad.u .ar.u,.dpad.d .ar.d,.dpad.l .ar.l,.dpad.r .ar.r{opacity:1;filter:drop-shadow(0 0 5px var(--brick-yellow));}
+.dpad.u .arm.v,.dpad.d .arm.v,.dpad.l .arm.h,.dpad.r .arm.h{background:#2c80e6;}
+#app.portrait .dpad{opacity:1;}
 #app.portrait .btn{width:68px;height:64px;opacity:1;}
 #app.portrait .actions{display:grid;grid-template-columns:auto auto;grid-template-areas:"sword throw" "special jump";gap:14px 12px;}
 #app.portrait .actions .btn{width:76px;height:66px;}
@@ -120,8 +137,7 @@ h2{font-size:clamp(26px,7vw,38px);color:var(--brick-yellow);text-shadow:0 3px 0 
 
   <div id="controls">
     <div class="pad">
-      <button class="btn" data-k="left" aria-label="Move left"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 4 6 12l10 8z"/></svg></button>
-      <button class="btn" data-k="right" aria-label="Move right"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 4l10 8-10 8z"/></svg></button>
+      <div class="dpad" id="dpad" role="group" aria-label="Direction pad: move, and aim in eight directions"><span class="arm h"></span><span class="arm v"></span><span class="hub"></span><span class="ar u"></span><span class="ar d"></span><span class="ar l"></span><span class="ar r"></span></div>
     </div>
     <div class="pad actions">
       <button class="btn jump" data-k="jump">JUMP</button>
@@ -1071,6 +1087,29 @@ document.querySelectorAll('.btn').forEach(b => {
   b.addEventListener('contextmenu', e => e.preventDefault());
 });
 document.addEventListener('gesturestart', e => e.preventDefault());
+/* Safari: two quick taps anywhere (even on a button's rounded corner) would zoom the page */
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => { const now = Date.now(); if (now - lastTouchEnd < 350 && !(e.target.closest && e.target.closest('input'))) e.preventDefault(); lastTouchEnd = now; }, {passive:false});
+document.addEventListener('dblclick', e => e.preventDefault(), {passive:false});
+/* the d-pad: where your thumb sits, measured from its centre, picks one of eight directions */
+const dpad = document.getElementById('dpad'); let dpadId = null;
+function dpadSet(e){
+  const r = dpad.getBoundingClientRect(), dx = e.clientX - (r.left + r.width/2), dy = e.clientY - (r.top + r.height/2);
+  let l = false, rt = false, u = false, d = false;
+  if (Math.hypot(dx, dy) > r.width*0.11){
+    const oct = Math.round(Math.atan2(dy, dx)/(Math.PI/4)), ax = Math.cos(oct*Math.PI/4), ay = Math.sin(oct*Math.PI/4);
+    rt = ax > 0.3; l = ax < -0.3; d = ay > 0.3; u = ay < -0.3;
+  }
+  input.left = l; input.right = rt; input.up = u; input.down = d;
+  dpad.classList.toggle('l', l); dpad.classList.toggle('r', rt); dpad.classList.toggle('u', u); dpad.classList.toggle('d', d);
+}
+function dpadClear(){ dpadId = null; input.left = input.right = input.up = input.down = false; dpad.classList.remove('l','r','u','d'); }
+if (dpad){
+  dpad.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); dpadId = e.pointerId; try { dpad.setPointerCapture(e.pointerId); } catch(_){} dpadSet(e); });
+  dpad.addEventListener('pointermove', e => { if (e.pointerId === dpadId) dpadSet(e); });
+  for (const ev of ['pointerup','pointercancel','lostpointercapture']) dpad.addEventListener(ev, e => { if (e.pointerId === dpadId) dpadClear(); });
+  dpad.addEventListener('contextmenu', e => e.preventDefault());
+}
 
 /* ---------- physics ---------- */
 function moveBody(e, dt){
@@ -1361,7 +1400,7 @@ function drawSecret(sc){
   if (cleared) drawWIcon(sc.weapon, cx, fy, 18, WEAPONS[sc.weapon].col);
   else { ctx.font = '15px Bungee, "Arial Black", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd23f'; ctx.fillText('?', cx, fy + 1); }
   if (doorAtPlayer() === sc && state === 'play'){
-    const txt = coarse ? 'TAP THE DOOR TO GO IN' : 'PRESS \u25B2 TO GO IN', a = 0.75 + 0.25*Math.sin(time*6);
+    const txt = coarse ? 'PRESS \u25B2 OR TAP THE DOOR' : 'PRESS \u25B2 TO GO IN', a = 0.75 + 0.25*Math.sin(time*6);
     ctx.font = '11px Bungee, "Arial Black", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const tw = ctx.measureText(txt).width + 14;
     ctx.fillStyle = `rgba(20,12,50,${0.8*a})`; ctx.fillRect(cx - tw/2, top - 46, tw, 18);

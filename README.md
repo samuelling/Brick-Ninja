@@ -6,22 +6,22 @@ A wandering ninja comes to the village of Ishimura, where the Shadow Master has 
 
 **Play:** https://samuelling.github.io/Brick-Ninja/
 
-The whole game is one file, `index.html`, with no build step. It runs on phones (touch buttons) and computers (keyboard and mouse).
+The whole game is one file, `index.html`, with no build step. It runs on phones (touch buttons and an 8-way d-pad) and computers (keyboard and mouse). Double-tap and pinch zoom are turned off, so quick taps on the buttons never zoom the page in Safari.
 
 ## Controls
 
 | Action | Touch | Keyboard / mouse |
 | --- | --- | --- |
-| Move | ◀ ▶ | ← → or A D |
+| Move | D-pad ◀ ▶ | ← → or A D |
 | Jump / double jump | JUMP | Space |
 | Climb | Hold toward a wall | Hold toward a wall |
 | Wall jump | JUMP while clinging | Space while clinging |
 | Stomp | Land on an enemy | Land on an enemy |
 | Sword | Sword button | Z or J |
 | Ninja stars | Star button, or touch where you want them to go | X or K, or click where you want them to go |
-| Aim | Touch and hold the game | Hold ↑ or ↓ (with ← → for diagonals) while throwing |
+| Aim | Point the d-pad in any of eight directions, or touch and hold the game | Hold ↑ or ↓ (with ← → for diagonals) while throwing |
 | Special weapon | Special button (hold to keep firing) | C or L |
-| Go through a secret door | Tap the door | ↑ |
+| Go through a secret door | D-pad ▲, or tap the door | ↑ |
 | Pause | II | P or Esc |
 | Music on/off | Title or pause screen | M |
 
