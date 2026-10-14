@@ -27,7 +27,7 @@ The whole game is one file, `index.html`, with no build step. It runs on phones 
 
 Landing on a bad guy smashes it and bounces you off in a spinning sword slash that hits anything nearby. Landing on a boss knocks off two points of health. Golden bricks give triple stars for a while.
 
-**In the race:** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
+**In the race (four laps):** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
 
 ## World 9: Dragon Falls
 
@@ -60,6 +60,22 @@ Inside is a corridor room seen from behind the ninja, like the base stages in Co
 | Cloud Castle | Thunder Chain | Lightning that jumps between up to four enemies |
 
 The weapon goes in the special slot, stays when you leave the room, and is saved in the browser. You hold one at a time: winning another room swaps it out, and you can always go back through a cleared door to win an old one again. Getting knocked out in a room just sends you back to the door with the hearts you went in with. The world picker shows which worlds still hide a door.
+
+## Level design that grows with you
+
+Worlds get longer as the game goes on: about 8,400 wide in Sunset Temple, about 12,000 by the Shadow Fortress (the first versions were around 5,600). A *complexity* score rises from world to world and from the start of each world to its end, and it drives everything below:
+
+- Gaps get wider, and more bad guys stand on each stretch, with more of them throwing things.
+- **Set pieces** appear between the plain stretches, more often the further you get. Each one unlocks at a certain complexity:
+  - **Stepping stones** over a pit. Later on, more of them crumble and one bobs up and down.
+  - **A cliff** too tall to jump, so you climb the wall. Early on there's a ledge halfway up; later there isn't, and guards wait on top.
+  - **A gauntlet**: a long run packed with bad guys and birds overhead, and later a thrower watching from a ledge.
+  - **Stairs** over a pit to a high ledge with a guard and a prize.
+  - **A high road** of platforms over a floor of spikes (or hoppers in gentler worlds).
+- Bosses get up to a quarter more health by the last world, and Thunder Road is now four laps.
+- Dragon Falls is a taller climb, and its ledges get narrower, wobblier and more likely to crumble the higher you go.
+
+The adaptive difficulty below still tunes the bad guys' speed to your win rate, but pits, cliffs and spikes aren't tuned, so the later worlds really are harder.
 
 ## Adaptive difficulty
 

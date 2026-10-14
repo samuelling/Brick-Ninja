@@ -383,7 +383,7 @@ const LEVELS = [
   particles:'wind', music:{t:5, bpm:150, mel:'C', lead:'square', chords:true},
   arena:[{dx:160,y:205,w:110},{dx:560,y:205,w:110},{dx:360,y:135,w:110}] },
 /* world 9: a vertical climb up a waterfall, like the Waterfall stage in Contra */
-{ id:'falls', song:'neoA', vertical:true, vbot:2900, name:'Dragon Falls', bossName:'Stone Oni', boss:'oni', seed:73, end:616,
+{ id:'falls', song:'neoA', vertical:true, vbot:4100, name:'Dragon Falls', bossName:'Stone Oni', boss:'oni', seed:73, end:616,
   sky:['#0b2233','#14485e','#1f7a8c','#5fb8c4'], bg:'falls', accent:'#1f9fb8',
   ground:{top:'#5aa84a', body:'#4f5a66', seam:'#3d4650', edge:'#2e353d'},
   pillar:['#5f6a78','#717d8c'], wall:['#4a5563','#566272'], plats:['#6f7a90','#3fae49','#1d6fd0','#8d99a8'],
@@ -400,6 +400,8 @@ const LEVELS = [
 
 ];
 const STORY = LEVELS.filter(lv => !lv.bonus);
+// how far through the game this world is, 0 (world 1) to 1 (the last world)
+const worldProg = () => clamp(STORY.indexOf(L)/(STORY.length - 1), 0, 1);
 const worldLabel = i => LEVELS[i].bonus ? 'Bonus world' : `World ${i + 1}`;
 
 let LI = 0, L = LEVELS[0], LEVEL_END = 5600, ARENA = 4700, GR = G;
@@ -917,7 +919,8 @@ function buildLevel(){
   const R = rng(L.seed);
   solids=[]; enemies=[]; studs=[]; powerups=[]; lavaPools=[]; lavaballs=[]; spikes=[]; hazards=[];
   wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[];
-  LEVEL_END = L.end; ARENA = L.end - 900;
+  // levels get longer as the game goes on: about 8,400 wide in world 1, about 12,000 by the Shadow Fortress
+  LEVEL_END = L.vertical ? L.end : L.end + 2800 + Math.round(worldProg()*3400); ARENA = LEVEL_END - 900;
   if (L.vertical){ buildVertical(); return; }
   const SEC = SECRETS[L.id];
   const addSecret = (gx, top) => { const st = progress.rooms[L.id] ? 'open' : 'hidden';
@@ -969,9 +972,105 @@ function buildLevel(){
   solids.push({x:760,y:GROUND-120,w:36,h:120,kind:'pillar'});
   studs.push({x:778,y:GROUND-138,phys:false,t:0},{x:778,y:GROUND-162,phys:false,t:0});
 
+  /* complexity: 0 at the start of world 1, rising through each world and from world to world. It widens the gaps,
+     adds guards, and brings in set pieces between the plain stretches (stepping stones over a pit, a cliff to climb,
+     a gauntlet of bad guys, stairs over a pit to a high ledge, a high road over a spiked floor). */
+  const PROG = worldProg(), cplx = xx => clamp(PROG*0.75 + (xx/LEVEL_END)*0.35, 0, 1);
+  const land = (lx, ltop, lw) => solids.push({x:lx, y:ltop, w:lw, h:H + 200 - ltop, kind:'ground'});
+  const pitFill = (px, pw) => {
+    if (L.lava){ lavaPools.push({x:px, w:pw}); lavaballs.push({x:px + pw/2, y:H + 20, vy:0, up:false, timer:1 + R()*2}); }
+    if (L.currents) currents.push({x:px - 30, w:pw + 60, fx:85});
+  };
+  const setPiece = (x0, top, c, seg) => {
+    const room = ARENA - 80 - x0, kinds = ['stones'];
+    if (c >= 0.2) kinds.push('cliff');
+    if (c >= 0.25) kinds.push('gauntlet');
+    if (c >= 0.35) kinds.push('stairs');
+    if (c >= 0.45) kinds.push('highroad');
+    const kind = kinds[Math.floor(R()*kinds.length)];
+    if (kind === 'stones'){
+      // stepping stones over a pit; later on some crumble and one bobs
+      const pw = Math.round(240 + c*170), n = Math.ceil(pw/125), sp = pw/n, w = Math.round(72 - c*16);
+      if (room < pw + 420) return null;
+      pitFill(x0, pw);
+      for (let i = 0; i < n; i++){
+        const sx = Math.round(x0 + sp*(i + 0.5) - w/2), sy = top - 40 - (i % 2 ? 40 : 0) - Math.round(R()*12);
+        const st = {x:sx, y:sy, w, h:16, kind:'plat', c:pc(seg + i)};
+        if (c > 0.6 && i === 1 && n >= 3) Object.assign(st, {mover:'y', x0:sx, y0:sy, range:24, speed:1.4, phase:R()*6, dx:0, dy:0});
+        else if (R() < 0.12 + c*0.35) crumbly(st);
+        solids.push(st); studs.push({x:sx + w/2, y:sy - 26, phys:false, t:0});
+      }
+      if (c > 0.4) enemies.push(makeEnemy('flyer', x0 + pw/2, top - 150, false));
+      land(x0 + pw, top, 380);
+      enemies.push(makeEnemy('grunt', x0 + pw + 230, top, !!L.throwKind && R() < L.throwP + 0.25*c));
+      return {x:x0 + pw + 380, top};
+    }
+    if (kind === 'cliff'){
+      // a cliff too tall to jump: climb the wall (early on there's a ledge halfway up), guards on top
+      const rise = Math.round(130 + c*80), pl = 380 + Math.floor(R()*3)*60, ptop = Math.max(70, top - rise);
+      if (room < pl + 500) return null;
+      land(x0, top, 160);
+      solids.push({x:x0 + 160, y:ptop, w:pl, h:H + 200 - ptop, kind:'ground'});
+      if (c < 0.6) solids.push({x:x0 + 70, y:top - Math.round(rise*0.55), w:62, h:14, kind:'plat', c:pc(seg)});
+      studLine(x0 + 200, ptop - 30, Math.floor((pl - 80)/44));
+      const n = 1 + Math.round(c*2);
+      for (let k = 0; k < n; k++) enemies.push(makeEnemy(k === n - 1 && c > 0.5 ? 'hopper' : 'grunt', x0 + 160 + pl*(k + 1)/(n + 1), ptop, !!L.throwKind && R() < 0.5));
+      if (L.spikes || c > 0.7) spikes.push({x:x0 + 160 + pl - 80, y:ptop - 10, w:40, h:10});
+      land(x0 + 160 + pl, top, 320);
+      return {x:x0 + 160 + pl + 320, top};
+    }
+    if (kind === 'gauntlet'){
+      // a long flat run packed with bad guys; later a thrower watches from a ledge above
+      const gl = 700 + Math.floor(R()*3)*80;
+      if (room < gl + 120) return null;
+      land(x0, top, gl);
+      powerups.push({x:x0 + 80, y:top - 60, w:20, h:16, got:false});
+      const n = 3 + Math.round(c*3);
+      for (let k = 0; k < n; k++) enemies.push(makeEnemy(R() < L.hopP ? 'hopper' : 'grunt', x0 + 220 + k*(gl - 300)/n, top, !!L.throwKind && R() < L.throwP + 0.3*c));
+      for (let k = 0; k < 1 + Math.round(c*1.5); k++) enemies.push(makeEnemy('flyer', x0 + 280 + k*240, top - 130 - k*20, false));
+      if (c > 0.5){ const hx = Math.round(x0 + gl*0.45); solids.push({x:hx, y:top - 130, w:120, h:16, kind:'plat', c:pc(seg + 1)}); enemies.push(makeEnemy('grunt', hx + 49, top - 130, !!L.throwKind)); }
+      return {x:x0 + gl, top};
+    }
+    if (kind === 'stairs'){
+      // three steps up over a pit to a high ledge with a guard, then drop down
+      const pw = 560;
+      if (room < pw + 420) return null;
+      pitFill(x0, pw);
+      let sy = top;
+      for (let i = 0; i < 3; i++){
+        sy -= 48;
+        const st = {x:x0 + 40 + i*120, y:sy, w:84, h:16, kind:'plat', c:pc(seg + i)};
+        if (c > 0.55 && i === 1) crumbly(st);
+        solids.push(st); studs.push({x:st.x + 42, y:sy - 26, phys:false, t:0});
+      }
+      const hx = x0 + 400, hy = sy - 26;
+      solids.push({x:hx, y:hy, w:200, h:16, kind:'plat', c:pc(seg + 3)});
+      enemies.push(makeEnemy('grunt', hx + 120, hy, !!L.throwKind));
+      if (R() < 0.5) powerups.push({x:hx + 40, y:hy - 34, w:20, h:16, got:false}); else studLine(hx + 20, hy - 26, 7);
+      land(x0 + pw, top, 380);
+      return {x:x0 + pw + 380, top};
+    }
+    // high road: four platforms over a floor of spikes (or hoppers, in gentler worlds)
+    const cl = 760;
+    if (room < cl + 120) return null;
+    land(x0, top, cl);
+    for (let i = 0; i < 4; i++){
+      const st = {x:x0 + 80 + i*170, y:top - 110 - (i % 2)*30, w:120, h:16, kind:'plat', c:pc(seg + i)};
+      if (c > 0.6 && R() < 0.35) crumbly(st);
+      solids.push(st); studLine(st.x + 16, st.y - 26, 4);
+    }
+    for (let i = 0; i < 3; i++){
+      if (c > 0.55 || L.spikes) spikes.push({x:x0 + 180 + i*190, y:top - 10, w:60, h:10});
+      else enemies.push(makeEnemy('hopper', x0 + 200 + i*190, top, false));
+    }
+    enemies.push(makeEnemy('flyer', x0 + cl/2, top - 200, false));
+    return {x:x0 + cl, top};
+  };
+
   let x = 900, top = GROUND, seg = 0;
   while (true){
-    let gap = L.gaps[0] + Math.floor(R()*((L.gaps[1]-L.gaps[0])/10 + 1))*10;
+    const c0 = cplx(x);
+    let gap = L.gaps[0] + Math.floor(R()*((L.gaps[1]-L.gaps[0])/10 + 1))*10 + Math.round(c0*3)*10;
     const mover = L.movers && seg % 2 === 1 ? L.movers : null;
     if (mover) gap = mover === 'orbit' ? 230 + Math.floor(R()*3)*10 : 170 + Math.floor(R()*3)*20;
     const len = 480 + Math.floor(R()*5)*80;
@@ -1013,7 +1112,7 @@ function buildLevel(){
       if (pillarX !== null && highPlat.x + highPlat.w > pillarX - 24) highPlat = null;
       else { if (L.crumble && R() < L.crumble) crumbly(highPlat); solids.push(highPlat); }
     }
-    if (seg===1 || seg===4 || seg===7){
+    if (seg % 3 === 1){
       const p = highPlat || {x:px,w:pw,y:top-85};
       powerups.push({x:p.x+p.w/2-10,y:p.y-34,w:20,h:16,got:false});
     } else if (highPlat) studLine(highPlat.x+12, highPlat.y-26, 4);
@@ -1042,7 +1141,8 @@ function buildLevel(){
     }
     // enemies
     // more ninjas, more bad guys: half again as many for each extra player
-    const count = Math.round((1 + (R() < 0.65 ? 1 : 0) + (seg > 4 && R() < 0.5 ? 1 : 0))*(1 + 0.5*(NP() - 1)));
+    // ...and more as the game goes on
+    const count = Math.round((1 + (R() < 0.65 ? 1 : 0) + (seg > 4 && R() < 0.5 ? 1 : 0))*(1 + 0.5*(NP() - 1))*(1 + 0.5*c0));
     for (let k=0;k<count;k++){
       let ex = nx + 160 + k*(len-240)/count;
       if (pillarX !== null && Math.abs(ex - pillarX) < 60) ex = pillarX - 80;
@@ -1051,11 +1151,14 @@ function buildLevel(){
       const r = R();
       if (seg >= 1 && r < L.hopP) type = 'hopper';
       else if (seg >= 2 && r > 1 - L.flyP) type = 'flyer';
-      const thrower = type === 'grunt' && !!L.throwKind && R() < L.throwP;
+      const thrower = type === 'grunt' && !!L.throwKind && R() < L.throwP + 0.25*c0;
       enemies.push(makeEnemy(type, ex, type==='flyer' ? top-130 : top, thrower));
     }
     if (R() < 0.5) studLine(nx+50, top-30, 3);
     x = nx + len; seg++;
+    // set pieces turn up more often the further you get
+    const c1 = cplx(x);
+    if (seg > 1 && R() < 0.2 + 0.55*c1){ const r = setPiece(x, top, c1, seg); if (r){ x = r.x; top = r.top; } }
   }
   if (SEC && !secrets.length && lastStretch) addSecret(lastStretch.nx + 36, lastStretch.top);
   // bridge to the arena
@@ -1091,11 +1194,11 @@ function buildVertical(){
   let y = VB - 80, row = 0, lane = 1, ups = 0;
   while (y > GROUND + 70){
     lane = lane === 1 ? (R() < 0.5 ? 0 : 2) : 1;
-    const wide = row % 4 === 3, w = wide ? 180 : 110 + Math.floor(R()*3)*20;
+    const hgt = 1 - (y - GROUND)/(VB - GROUND), wide = row % 4 === 3, w = wide ? 180 : Math.round((110 + Math.floor(R()*3)*20)*(1 - 0.2*hgt));
     const x = clamp(Math.round(lanes[lane] - w/2 + (R()*2 - 1)*18), X0 + 6, X1 - 6 - w);
     const p = {x, y, w, h:16, kind:'plat', c:pc(row)};
-    if (!wide && row > 2 && R() < 0.16){ Object.assign(p, {mover:'x', x0:x, range:46, speed:1.2 + R()*0.5, phase:R()*6, dx:0, dy:0}); }
-    else if (!wide && row > 1 && R() < L.crumble) Object.assign(p, {crumble:true, cst:'idle', ct:0, fy:0, fvy:0, off:false, pop:0});
+    if (!wide && row > 2 && R() < 0.14 + 0.2*hgt){ Object.assign(p, {mover:'x', x0:x, range:46 + Math.round(hgt*20), speed:1.2 + R()*0.5 + hgt*0.4, phase:R()*6, dx:0, dy:0}); }
+    else if (!wide && row > 1 && R() < L.crumble + 0.25*hgt) Object.assign(p, {crumble:true, cst:'idle', ct:0, fy:0, fvy:0, off:false, pop:0});
     solids.push(p);
     if (wide){
       // a wide ledge: a guard stands on it
@@ -1111,7 +1214,7 @@ function buildVertical(){
       if (Math.abs(x2 - x) > w2 + 30){ solids.push({x:x2, y:y - 10, w:w2, h:16, kind:'plat', c:pc(row + 1)}); studLine(x2 + 12, y - 36, 4); }
     }
     if (row > 3 && row % (NP() > 1 ? 3 : 5) === 2) enemies.push(makeEnemy('flyer', lanes[2 - lane] - 12, y - 70, false));
-    y -= 78 + Math.floor(R()*3)*8; row++;
+    y -= 78 + Math.floor(R()*3)*8 + (hgt > 0.5 && R() < 0.3 ? 12 : 0); row++;
   }
   // the oni's arena: a floor you can jump up through, and two ledges for reaching its head
   solids.push({x:X0, y:GROUND, w:X1 - X0, h:16, kind:'plat', c:'#8d99a8'});
@@ -2010,7 +2113,7 @@ const BOSS = {
 };
 function makeBoss(kind, ax){
   const B = BOSS[kind];
-  const hp = Math.max(6, Math.round(B.hp*lerpD(0.6, 1.4)*(1 + 0.6*(NP() - 1))));
+  const hp = Math.max(6, Math.round(B.hp*lerpD(0.6, 1.4)*(1 + 0.6*(NP() - 1))*(1 + 0.25*worldProg())));
   const e = {type:'boss', kind, x:LEVEL_END - 180, y:GROUND - B.h, w:B.w, h:B.h, vx:0, vy:0, dir:-1, hp, max:hp, chunk:0,
     flash:0, t:0, active:false, arenaX:ax, st:'', st_t:0, onG:false, hidden:false, harm:null, throwA:0, hitEdge:false};
   B.init(e);
@@ -2142,7 +2245,7 @@ function drawWindFx(){
 /* ---------- Thunder Road: a pseudo-3D kart race against Raijin ----------
    The road is a ring of short segments, each projected from a camera behind the player's kart and
    drawn near-to-far with clipping over hills (the classic arcade sprite-scaling road). */
-const RC = {segL:200, rumble:3, roadW:2000, camH:1000, depth:0.84, drawDist:170, laps:3, maxSpeed:12000, carHalf:0.135};
+const RC = {segL:200, rumble:3, roadW:2000, camH:1000, depth:0.84, drawDist:170, laps:4, maxSpeed:12000, carHalf:0.135};
 let RS = null, ENG = null;
 const raceEase = (a, b, p) => a + (b - a)*((-Math.cos(p*Math.PI)/2) + 0.5);
 const RACE_SOLID = {lantern:0.14, sakura:0.09, bamboo:0.12, banner:0.04, pagoda:0.5};
