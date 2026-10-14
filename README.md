@@ -2,7 +2,7 @@
 
 A side-scrolling ninja game built from bricks. Game idea by Everett.
 
-A wandering ninja comes to the village of Ishimura, where the Shadow Master has cut the Sun Lantern into ten shards and handed them to his ten guardians. Fight, climb and race through ten worlds, beat each guardian, and bring the light home. The story is told Kurosawa-style: black-and-white storms, hard wipes between shots, taiko drums, and an ending that turns the whole village back to color.
+A wandering ninja comes to the village of Ishimura, where the Shadow Master has cut the Sun Lantern into twelve shards and handed them to his twelve guardians. Fight, climb, race and ride through twelve worlds, beat each guardian, and bring the light home. The story is told Kurosawa-style: black-and-white storms, hard wipes between shots, taiko drums, and an ending that turns the whole village back to color.
 
 **Play:** https://samuelling.github.io/Brick-Ninja/
 
@@ -61,6 +61,12 @@ Inside is a corridor room seen from behind the ninja, like the base stages in Co
 
 The weapon goes in the special slot, stays when you leave the room, and is saved in the browser. You hold one at a time: winning another room swaps it out, and you can always go back through a cleared door to win an old one again. Getting knocked out in a room just sends you back to the door with the hearts you went in with. The world picker shows which worlds still hide a door.
 
+## The two craziest worlds
+
+**Moon Palace.** Gravity is a little over half of normal, so every jump is huge and floaty, and the gaps are wide to match. Glowing rings on the ground warn where meteors are about to come down at an angle. At the end, the Mochi Rabbit (a giant moon rabbit with a rice-cake mallet) hops at you, lobs balls of mochi, and when it lands from a big hop it pounds the ground and sends ripples of moon dust rolling both ways: jump them.
+
+**Shadow Express.** You run along the roofs of a speeding train, and the screen scrolls on by itself, pushing you along from the left (a little faster when you're doing well). Jump the gaps between cars, hop the crates and vents, climb the double-decker cars, and don't jump into the crackling live wires strung overhead. Fall between cars and you're put back down on the next roof on screen, a heart lighter. On the locomotive, the Kabuto Gunship (a rotor-winged beetle) drops bombs, fires its twin cannons, and skims low along the roof: jump over it.
+
 ## Level design that grows with you
 
 Worlds get longer as the game goes on: about 8,400 wide in Sunset Temple, about 12,000 by the Shadow Fortress (the first versions were around 5,600). A *complexity* score rises from world to world and from the start of each world to its end, and it drives everything below:
@@ -102,7 +108,9 @@ New mechanics build up as the game goes on.
 | 7 | Thunder Road | A third-person kart race | Raijin the Thunder Rider | Power metal |
 | 8 | Cloud Castle | Springs, wind gusts, turning platform wheels | Storm Eagle | Heroic NES |
 | 9 | Dragon Falls | A vertical climb up a waterfall | Stone Oni | Neoclassical shred |
-| 10 | Shadow Fortress | Darkness, spikes, crushers, elevators | Shadow Master | Power metal |
+| 10 | Moon Palace | Low gravity, meteor showers, very wide gaps | Mochi Rabbit | Bright NES |
+| 11 | Shadow Express | The screen scrolls by itself along a speeding train; live wires overhead | Kabuto Gunship | Power metal |
+| 12 | Shadow Fortress | Darkness, spikes, crushers, elevators | Shadow Master | Power metal |
 
 All the music is original and synthesized in the browser. Every world is open from the start. Cleared worlds and the story progress are saved in the browser.
 

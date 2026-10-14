@@ -166,7 +166,7 @@ h2{font-size:clamp(26px,7vw,38px);color:var(--brick-yellow);text-shadow:0 3px 0 
       <div class="card">
         <p class="eyebrow">Game idea by Everett</p>
         <h1>Brick Ninja</h1>
-        <p>A wandering ninja, a village gone dark, and ten guardians holding the shards of the Sun Lantern.</p>
+        <p>A wandering ninja, a village gone dark, and twelve guardians holding the shards of the Sun Lantern.</p>
         <div class="row"><button class="play" id="playBtn">Play</button><button class="play alt" id="mpBtn">Play together</button></div>
         <button class="small" id="storyBtn">Watch the story</button>
         <div class="adapt">
@@ -390,6 +390,22 @@ const LEVELS = [
   grunt:{body:'#2f7f8c', hood:'#123a4a', leg:'#123a4a'}, hopper:'crab', flyer:'bird',
   hopP:0.3, flyP:0.3, throwP:0.35, throwKind:'shuriken', crumble:0.18, gaps:[70,100], steps:[0], pillarEvery:2, pillarH:[130,175],
   particles:'spray', music:{t:2, bpm:150, mel:'C', lead:'square', chords:true}, arena:[] },
+/* world 10: the moon. Low gravity, wide gaps, meteor showers, and the rabbit who pounds mochi up there */
+{ id:'moon', song:'moonA', lowGrav:true, meteors:true, springs:true, name:'Moon Palace', bossName:'Mochi Rabbit', boss:'rabbit', seed:41, end:5800,
+  sky:['#05030f','#0f0b2a','#1d1a4a','#2e2a66'], bg:'moon', accent:'#8f86d8',
+  ground:{top:'#d9d6e6', body:'#8e8aa3', seam:'#75718a', edge:'#5f5b74'},
+  pillar:['#a7a3bc','#bdb9d1'], wall:['#75718a','#8e8aa3'], plats:['#e8e4f5','#8f86d8','#f7c51e','#c9c6d6'],
+  grunt:{body:'#e8e4f5', hood:'#4a3f8a', leg:'#4a3f8a', eye:'#ff6ad5'}, hopper:'storm', flyer:'ghost',
+  hopP:0.4, flyP:0.3, throwP:0.35, throwKind:'snowball', gaps:[120,170], steps:[0,50,0,80,30], pillarEvery:2, pillarH:[150,190],
+  particles:'motes', music:{t:4, bpm:160, mel:'C', lead:'square', chords:true}, arena:[{dx:180,y:190,w:110},{dx:540,y:190,w:110}] },
+/* world 11: the Shadow Express. The screen scrolls by itself while you run along the roofs of a speeding train */
+{ id:'train', song:'forceD', autoscroll:true, name:'Shadow Express', bossName:'Kabuto Gunship', boss:'kabuto', seed:23, end:6000, groundStyle:'train',
+  sky:['#1a0b1e','#4a1838','#a8384a','#f08a4a'], bg:'train', accent:'#e0442a',
+  ground:{top:'#3a3446', body:'#8a1f2a', seam:'#5a141c', edge:'#2b1a20'},
+  pillar:['#4a4458','#5a5468'], wall:['#2e2938','#3a3446'], plats:['#5a5468','#d22b2b','#f7c51e','#4a4458'],
+  grunt:{body:'#1a1622', hood:'#e0442a', leg:'#0e0b14', eye:'#ffd23f'}, hopper:'shadow', flyer:'bat',
+  hopP:0.2, flyP:0.4, throwP:0.45, throwKind:'shuriken', gaps:[70,110], steps:[0], pillarEvery:2, pillarH:[130,175],
+  particles:'wind', music:{t:-2, bpm:170, mel:'A', lead:'square', chords:true}, arena:[] },
 { id:'fortress', song:'forceB', crushers:true, movers:'y', name:'Shadow Fortress', bossName:'Shadow Master', boss:'shadow', seed:99, end:6000, spikes:true, dark:true,
   sky:['#05040c','#120d26','#22163c','#3a2350'], bg:'fortress', accent:'#6a35a0',
   ground:{top:'#5a5468', body:'#38323f', seam:'#25212c', edge:'#1c1922'},
@@ -812,6 +828,16 @@ function neoSong(o){
   }};
 }
 Object.assign(SONGS, {
+  moonA: chipSong({style:'mega', bpm:168, leadDuty:50, arpDuty:12, echo:true, chords:['C','D','Em','D','C','D','Bm','D'], lead:`
+    C5 - - - E5 - - - G5 - - - F#5 - E5 - | D5 - - - - - - - A5 - G5 - F#5 - D5 - |
+    E5 - G5 - B5 - - - A5 - G5 - E5 - - - | F#5 - - - - - - - D5 - E5 - F#5 - A5 - |
+    G5 - - - E5 - G5 - C6 - - - B5 - G5 - | A5 - - - F#5 - - - D5 - - - E5 - F#5 - |
+    G5 - - - - - - - B5 - - - D6 - - - | C6 - - - - - - - . . G5 A5 B5 C6 D6 E6`}),
+  forceD: forceSong({bpm:212, key:'E4', chords:['Em','C','D','B','Em','G','D','B'], lead:`
+    E5 - - - G5 - F#5 - E5 - - - B4 - - - | C5 - - - - - - - D5 - E5 - F#5 - - - |
+    G5 - - - F#5 - E5 - D#5 - - - - - - - | B5 - - - A5 - G5 - F#5 - E5 - D#5 - - - |
+    E5 - - - - - - - G5 - - - B5 - - - | D6 - - - C6 - B5 - A5 - - - G5 - - - |
+    F#5 - - - G5 - A5 - B5 - - - D6 - - - | D#6 - - - - - - - - - - - - - - -`}),
   neoA: neoSong({bpm:176, key:'A4', chords:[{r:'A3', q:'m'}, {r:'F3'}, {r:'D3', q:'m'}, {r:'E3'}, {r:'A3', q:'m'}, {r:'G3'}, {r:'F3'}, {r:'E3'},
                                             {r:'D3', q:'m'}, {r:'A3', q:'m'}, {r:'G#3', q:'d'}, {r:'E3'}]}),
   gaidenA: chipSong({style:'gaiden', bpm:152, leadDuty:25, arpDuty:12, chords:['Am','F','G','Em','Am','F','Dm','E'], lead:`
@@ -918,10 +944,11 @@ function makeEnemy(type, x, top, thrower){
 function buildLevel(){
   const R = rng(L.seed);
   solids=[]; enemies=[]; studs=[]; powerups=[]; lavaPools=[]; lavaballs=[]; spikes=[]; hazards=[];
-  wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[];
+  wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[]; wires=[];
   // levels get longer as the game goes on: about 8,400 wide in world 1, about 12,000 by the Shadow Fortress
   LEVEL_END = L.vertical ? L.end : L.end + 2800 + Math.round(worldProg()*3400); ARENA = LEVEL_END - 900;
   if (L.vertical){ buildVertical(); return; }
+  if (L.autoscroll){ buildTrain(); return; }
   const SEC = SECRETS[L.id];
   const addSecret = (gx, top) => { const st = progress.rooms[L.id] ? 'open' : 'hidden';
     secrets.push({x:gx, y:top, w:64, h:82, st, weapon:SEC.weapon, pop:0}); };
@@ -1181,6 +1208,71 @@ function buildLevel(){
   enemies.push(boss);
 }
 
+/* the Shadow Express: train cars end to end with gaps between them, crates and vents on the roofs, double-decker
+   cars, live wires strung overhead (don't jump into them), and the locomotive at the front for the boss */
+let wires = [];
+function buildTrain(){
+  const R = rng(L.seed), PROG = worldProg(), pc = i => L.plats[mod(i, L.plats.length)];
+  const studLine = (x, y, n) => { for (let i = 0; i < n; i++) studs.push({x:x + i*22, y, phys:false, t:0}); };
+  solids.push({x:-300, y:GROUND, w:1000, h:200, kind:'ground', car:true});
+  studLine(260, GROUND - 36, 5);
+  let x = 700, car = 0;
+  while (true){
+    const gap = 70 + Math.floor(R()*4)*15 + Math.round(PROG*20);
+    let len = 560 + Math.floor(R()*4)*80;
+    // leave about a thousand for the locomotive at the front
+    if (x + gap + len > LEVEL_END - 1000) len = LEVEL_END - 1000 - x - gap;
+    if (len < 420) break;
+    x += gap;
+    const c = clamp(x/LEVEL_END, 0, 1);
+    solids.push({x, y:GROUND, w:len, h:200, kind:'ground', car:true});
+    const deck = car % 3 === 2;
+    let wireOK = [x + 160, x + len - 160];
+    if (deck){
+      // a double-decker: climb up, run along the top, drop off the far end
+      const dx = x + 150, dw = len - 300;
+      solids.push({x:dx, y:GROUND - 70, w:dw, h:70, kind:'ground', car:true, deck:true});
+      studLine(dx + 20, GROUND - 100, Math.floor((dw - 40)/30));
+      enemies.push(makeEnemy('grunt', dx + dw/2, GROUND - 70, R() < L.throwP + 0.3*c));
+      wireOK = null;
+    } else {
+      // a crate or a vent to hop over
+      const vx = x + 110 + Math.floor(R()*3)*40, vh = 30 + Math.floor(R()*2)*16;
+      solids.push({x:vx, y:GROUND - vh, w:34, h:vh, kind:'pillar'});
+      studs.push({x:vx + 17, y:GROUND - vh - 18, phys:false, t:0});
+      wireOK = [vx + 140, x + len - 140];
+    }
+    // live wires overhead: they only hurt if you jump into them
+    if (car > 0 && wireOK && wireOK[1] - wireOK[0] > 120 && R() < 0.5 + 0.35*c){
+      const wx = Math.round(wireOK[0] + R()*(wireOK[1] - wireOK[0] - 110));
+      wires.push({x:wx, y:GROUND - 96, w:110, h:10});
+    }
+    const n = Math.round((1 + (R() < 0.6 ? 1 : 0) + (c > 0.5 ? 1 : 0))*(1 + 0.5*(NP() - 1)));
+    for (let k = 0; k < n; k++){
+      const ex = x + len - 120 - k*110, r = R();
+      enemies.push(r < L.flyP ? makeEnemy('flyer', ex, GROUND - 140, false) : makeEnemy(r < L.flyP + L.hopP ? 'hopper' : 'grunt', ex, GROUND, R() < L.throwP + 0.25*c));
+    }
+    if (car % 4 === 1) powerups.push({x:x + len/2 - 10, y:GROUND - 120, w:20, h:16, got:false});
+    else if (R() < 0.6) studLine(x + len/2 - 44, GROUND - 120, 5);
+    x += len; car++;
+  }
+  // the locomotive: a long, flat roof where the gunship attacks
+  x += 90;
+  const ax = x;
+  solids.push({x:ax, y:GROUND, w:LEVEL_END + 400 - ax, h:200, kind:'ground', car:true, engine:true});
+  solids.push({x:LEVEL_END, y:-200, w:60, h:H + 400, kind:'wall'});
+  ARENA = ax;
+  boss = makeBoss(L.boss, ax);
+  enemies.push(boss);
+}
+// on the train the screen scrolls by itself, a little faster when you're doing well
+const scrollSpeed = () => lerpD(120, 175);
+// somewhere solid to put you down on screen, for when you fall between cars
+function scrollSafe(){
+  for (let x = camX + 70; x < camX + W - 60; x += 18){ const t = groundTopAt(x); if (t !== null && t >= 150) return {x, y:t - P.h - 20}; }
+  return {x:P.safeX, y:P.safeY - 20};
+}
+
 /* the climb: rows of ledges zig-zagging up between two slick waterfall walls, with the oni's arena on top */
 function buildVertical(){
   const R = rng(L.seed), VB = L.vbot, X0 = 24, X1 = L.end, pc = i => L.plats[mod(i, L.plats.length)];
@@ -1232,7 +1324,7 @@ const NET = {ws:null, on:false, code:'', id:null, n:0, name:'', peers:new Map(),
 function newPlayer(){ return {x:60,y:GROUND-34,w:22,h:34,vx:0,vy:0,face:1,onG:false,hp:5,inv:0,cd:0,scd:0,throwA:0,slash:0,slashFace:1,slashHit:null,triple:0,coyote:0,airJumps:1,flip:0,spin:0,spinHit:null,wcd:0,gunA:0,spLatch:false,upLatch:false,cling:0,climbing:false,wjT:0,safeX:60,safeY:GROUND-34,run:false}; }
 function loadLevel(i){
   LI = i; L = LEVELS[i]; MUS = L.music;
-  GR = G * (L.water ? 0.42 : 1);
+  GR = G * (L.water ? 0.42 : L.lowGrav ? 0.58 : 1);
   GRUNT_COL = {leg:L.grunt.leg, body:L.grunt.body, belt:'#151515', trim:L.grunt.hood, hood:L.grunt.hood, skin:'#f7c51e'};
   makeSky();
   resetLevel();
@@ -1240,7 +1332,7 @@ function loadLevel(i){
 function resetLevel(){
   mech = {icT:2.5, windT:5, gust:0, gustDir:-1, warn:false, cycle:-1};
   ROOM = null;
-  if (L.race){ solids=[]; enemies=[]; studs=[]; powerups=[]; lavaPools=[]; lavaballs=[]; spikes=[]; hazards=[]; wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[]; boss = null; initRace(); }
+  if (L.race){ wires=[]; solids=[]; enemies=[]; studs=[]; powerups=[]; lavaPools=[]; lavaballs=[]; spikes=[]; hazards=[]; wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[]; boss = null; initRace(); }
   else buildLevel();
   P = newPlayer(); studCount = 0; camX = 0; camY = 0; shake = 0; winTimer = 0; bannerT = 3.2;
   if (L.vertical){ P.x = 309; P.y = L.vbot - P.h; P.safeX = P.x; P.safeY = P.y; camY = clamp(P.y - H*0.58, 0, L.vbot + 60 - H); camX = (24 + L.end)/2 - W/2; }
@@ -1854,6 +1946,68 @@ function dragonTrail(e){
   for (let i = 1; i <= 9; i++) e.segs.push(e.hist[Math.min(e.hist.length-1, i*8)]);
 }
 const BOSS = {
+  /* the Mochi Rabbit: a giant moon rabbit with a mallet. It hops (very high, in moon gravity), and when it lands from a
+     big hop it pounds the ground and sends ripples of moon dust both ways. In between it lobs balls of mochi. */
+  rabbit: { w:64, h:78, hp:20, c:['#f2eff8','#c9c6d6','#ff6ad5','#8b5a2b'],
+    init(e){ e.hopT = 1.6; e.throwT = 2.6; e.mallet = 0; e.slam = false; },
+    update(e, dt){
+      const angry = e.hp < e.max/2, d = toward(e);
+      e.dir = d; e.mallet = Math.max(0, e.mallet - dt);
+      if (e.onG){
+        e.vx *= 0.85; e.hopT -= dt; e.throwT -= dt;
+        if (e.hopT <= 0){
+          const big = Math.random() < (angry ? 0.6 : 0.45);
+          e.vy = big ? -560 : -360; e.vx = d*(big ? 150 : 110); e.slam = big; e.hopT = (angry ? 1.4 : 2.0) + Math.random()*0.6;
+          tone(big ? 300 : 420, 900, 0.25, 'triangle', 0.05);
+        } else if (e.throwT <= 0){
+          e.throwT = angry ? 1.6 : 2.4; e.mallet = 0.3;
+          for (let k = 0; k < (angry ? 3 : 2); k++) shoot('snowball', e.x + e.w/2, e.y + 20, d*(140 + k*70), -320 - k*40, GR*0.7, 9);
+        }
+      }
+      const landed = bossGround(e, dt);
+      if (landed && e.slam){
+        e.slam = false; e.mallet = 0.4;
+        for (const dir of [-1, 1]) hazards.push({kind:'wave', x:e.x + e.w/2 + dir*36, dir, t:0, speed:angry ? 260 : 200, dur:2.4});
+        if (!reduceMotion) shake = Math.max(shake, 8); clack(6, 0.2); tone(110, 50, 0.4, 'sawtooth', 0.07);
+        burst(e.x + e.w/2, GROUND - 4, ['#e8e4f5','#c9c6d6'], 10, 0.8);
+      }
+    },
+    draw: drawRabbit },
+  /* the Kabuto Gunship: a rotor-winged beetle over the locomotive. It drops bombs, fires its twin cannons,
+     and every so often skims low along the roof (jump over it). */
+  kabuto: { w:100, h:52, hp:22, c:['#2b2b33','#e0442a','#ffd23f'],
+    init(e){ e.y = 80; e.st = 'hover'; e.bombT = 2.2; e.swoopT = 6; e.shotT = 3.4; },
+    idle(e, dt){ e.dir = -1; e.y = 80 + Math.sin(e.t*2)*6; },
+    update(e, dt){
+      const angry = e.hp < e.max/2, cx = e.x + e.w/2, pcx = P.x + P.w/2;
+      if (e.st === 'hover'){
+        const mid = (e.arenaX + LEVEL_END)/2, span = (LEVEL_END - e.arenaX)/2 - 110;
+        const tx = mid + Math.sin(e.t*0.7)*span - e.w/2, ty = 78 + Math.sin(e.t*1.9)*20;
+        e.vx = (tx - e.x)*2; e.vy = (ty - e.y)*2;
+        e.bombT -= dt; e.swoopT -= dt; e.shotT -= dt;
+        if (e.bombT <= 0){ e.bombT = angry ? 1.3 : 2.0; shoot('fire', cx, e.y + e.h, e.vx*0.3, 40, GR, 9); tone(500, 200, 0.2, 'square', 0.03); }
+        if (e.shotT <= 0){
+          e.shotT = angry ? 2.2 : 3.2;
+          const a = Math.atan2(P.y + 15 - (e.y + e.h - 6), pcx - cx);
+          for (let k = -(angry ? 2 : 1); k <= (angry ? 2 : 1); k++){ const b = a + k*0.18; shoot('fire', cx, e.y + e.h - 6, Math.cos(b)*260, Math.sin(b)*260, 0, 6); }
+          clack(3, 0.12);
+        }
+        if (e.swoopT <= 0){ e.st = 'charge'; e.st_t = 0.8; tone(200, 900, 0.7, 'sawtooth', 0.05); }
+      } else if (e.st === 'charge'){
+        e.vx *= 0.9; e.vy = ((GROUND - e.h - 4) - e.y)*3; e.st_t -= dt;
+        if (e.st_t <= 0){ e.st = 'swoop'; e.sdir = pcx < cx ? -1 : 1; e.st_t = 3; }
+      } else if (e.st === 'swoop'){
+        e.vx = e.sdir*(angry ? 470 : 400); e.vy = ((GROUND - e.h - 4) - e.y)*6; e.st_t -= dt;
+        if (e.hitEdge || e.st_t <= 0){ e.st = 'climb'; e.st_t = 1; }
+      } else {
+        e.vy = -260; e.vx *= 0.95; e.st_t -= dt;
+        if (e.st_t <= 0 || e.y < 80){ e.st = 'hover'; e.swoopT = angry ? 4.5 : 6; }
+      }
+      e.x += e.vx*dt; e.y += e.vy*dt; clampArena(e);
+      e.y = clamp(e.y, 24, GROUND - e.h - 2);
+      if (Math.abs(e.vx) > 20) e.dir = e.vx > 0 ? 1 : -1;
+    },
+    draw: drawKabuto },
   /* the Stone Oni at the top of Dragon Falls: a giant floating head that spits fire, with two stone fists
      that hover, take aim at whoever is closest (a shadow shows where) and slam down onto the arena */
   oni: { w:120, h:96, hp:26, c:['#7d8597','#4f5666','#ff4040','#3fae49'],
@@ -2134,6 +2288,14 @@ function updateMechanics(dt, playing){
       mech.icT = 2.1 + Math.random()*1.1;
       const x = P.x + P.w/2 + P.face*(50 + Math.random()*170), gy = groundTopAt(x);
       if (gy !== null) hazards.push({kind:'mark', x, t:0, warn:1.1, gy});
+    }
+  }
+  if (L.meteors && playing && !bossOn && P.x < ARENA - 150){
+    mech.icT -= dt;
+    if (mech.icT <= 0){
+      mech.icT = 1.5 + Math.random()*1.2;
+      const x = P.x + P.w/2 + P.face*(80 + Math.random()*240), gy = groundTopAt(x);
+      if (gy !== null) hazards.push({kind:'meteor', x, t:0, warn:1.2, gy});
     }
   }
   if (L.wind){
@@ -2877,6 +3039,7 @@ function update(dt){
     }
 
     for (const sp of spikes) if (overlap(P, sp)) hurt(sp.x + sp.w/2);
+    for (const wr of wires) if (overlap(P, wr)){ hurt(wr.x + wr.w/2); if (P.vy < 0) P.vy = 120; }
 
     // in the falls, dropping a long way below your last safe ledge counts as a fall
     const fell = L.vertical ? P.y > P.safeY + H*0.9 : L.lava ? (P.y + P.h > H - 20) : (P.y > H + 80);
@@ -2884,7 +3047,7 @@ function update(dt){
       if (L.lava){ burst(P.x + P.w/2, H - 22, ['#ff8a1f','#ffd23f','#e0441a'], 10, 0.8); tone(300,80,0.3,'sawtooth',0.06); }
       P.hp--; sfx.hurt(); adaptTrial(false, 'fall');
       if (P.hp <= 0){ P.hp = 0; P.y = camY + H + 80; goDown(); }
-      else { P.x = P.safeX; P.y = P.safeY - 20; P.vx = 0; P.vy = 0; P.inv = 1.6; P.cling = 0; }
+      else { if (L.autoscroll){ const sp = scrollSafe(); P.safeX = sp.x; P.safeY = sp.y + 20; } P.x = P.safeX; P.y = P.safeY - 20; P.vx = 0; P.vy = 0; P.inv = 1.6; P.cling = 0; }
     }
   }
 
@@ -3010,6 +3173,14 @@ function update(dt){
     h.t += dt;
     if (h.kind === 'mark'){
       if (h.t >= h.warn){ h.dead = true; shoot('icicle', h.x, -20, 0, 0, GR, 8); }
+    } else if (h.kind === 'meteor'){
+      // a glowing ring shows where it lands; it comes in at an angle
+      if (h.t >= h.warn){ h.dead = true; shoot('fire', h.x + 64, -30, -75, 160, GR*0.6, 10, {meteor:true}); tone(900, 200, 0.6, 'sawtooth', 0.025); }
+    } else if (h.kind === 'wave'){
+      // the rabbit's mallet sends a ripple of moon dust along the ground: jump it
+      h.x += h.dir*h.speed*dt;
+      if (playing && overlap(P, {x:h.x - 14, y:GROUND - 22, w:28, h:22})) hurt(h.x);
+      if (h.t >= h.dur || h.x < (boss ? boss.arenaX : 0) || h.x > LEVEL_END) h.dead = true;
     } else if (h.kind === 'tentacle'){
       const T = h.t - h.warn; h.hcd = Math.max(0, h.hcd - dt);
       if (T < 0) h.hgt = 0;
@@ -3084,7 +3255,18 @@ function update(dt){
   pops = pops.filter(p => p.life > 0);
 
   // camera
-  if (L.vertical){
+  if (L.autoscroll && !(boss && boss.active)){
+    if (state === 'play' && bannerT < 2) camX = Math.min(ARENA - W*0.25, camX + scrollSpeed()*dt);
+    shake = Math.max(0, shake - dt*30);
+    if (playing){
+      if (P.x < camX + 2){
+        P.x = camX + 2;
+        // squeezed against a crate by the edge of the screen: bump, and back on the roof
+        if (solids.some(s2 => !s2.off && s2.kind !== 'plat' && overlap(P, s2))){ hurt(P.x - 40); const sp = scrollSafe(); P.x = sp.x; P.y = sp.y; P.vx = 0; P.vy = 0; }
+      }
+      if (P.x + P.w > camX + W - 8) P.x = camX + W - 8 - P.w;
+    }
+  } else if (L.vertical){
     camX = (24 + L.end)/2 - W/2;
     const ty = boss && boss.active && !boss.dead ? 0 : P.y - H*0.58;
     camY += (ty - camY)*Math.min(1, dt*5);
@@ -3813,6 +3995,33 @@ function puffCloud(x, y, r, c){
   ctx.fill(); ctx.fillRect(x - r*1.5, y + r*0.3, r*3, r*0.6);
 }
 const BG = {
+  moon(){
+    // stars, the Earth hanging in the sky, and grey hills full of craters
+    for (let i = 0; i < 70; i++){ const sx = mod(hash(i)*W*1.6 - camX*0.03, W), sy = hash(i + 7)*H*0.75, tw = 0.5 + 0.5*Math.sin(time*2 + i);
+      ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.5*tw})`; ctx.fillRect(sx, sy, i % 5 ? 1.5 : 2.5, i % 5 ? 1.5 : 2.5); }
+    const ex = W*0.74 - camX*0.01, ey = 92;
+    circle(ex, ey, 44, '#1f6fd0'); ctx.fillStyle = '#3fae49';
+    ctx.beginPath(); ctx.ellipse(ex - 12, ey - 8, 16, 11, 0.4, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(ex + 16, ey + 14, 12, 8, -0.3, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(ex + 4, ey - 26, 18, 5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,20,0.35)'; ctx.beginPath(); ctx.arc(ex + 14, ey + 6, 44, -1.2, 1.9); ctx.fill();
+    steppedMountains(0.12, 260, '#2e2a52', 40, 60, 320, 0);
+    steppedMountains(0.3, 200, '#4a456e', 30, 50, 240, 9);
+    repeatX(0.3, 230, (i, x0) => { const cw = 30 + hash(i)*40; ctx.fillStyle = 'rgba(20,16,50,0.35)'; ctx.beginPath(); ctx.ellipse(x0 + 100, GROUND - 6, cw, 7, 0, 0, 7); ctx.fill(); });
+  },
+  train(){
+    // dusk, mountains flying past, telegraph poles whipping by, and the track far below
+    steppedDisc(W*0.3, 210, 60, '#ffd879', '#ffb04a');
+    const fast = time*90;
+    for (let i = 0; i < 9; i++){ const bx = mod(i*170 - camX*0.08 - fast*0.6, W + 340) - 170, bh = 70 + hash(i)*80;
+      ctx.fillStyle = '#5a1f3a'; ctx.beginPath(); ctx.moveTo(bx, GROUND); ctx.lineTo(bx + 85, GROUND - bh); ctx.lineTo(bx + 170, GROUND); ctx.closePath(); ctx.fill(); }
+    for (let i = 0; i < 7; i++){ const bx = mod(i*130 - camX*0.3 - fast*2.2, W + 260) - 130, bh = 40 + hash(i + 3)*50;
+      ctx.fillStyle = '#3a1028'; ctx.fillRect(bx, GROUND - bh, 120, bh); }
+    for (let i = 0; i < 4; i++){ const px = mod(i*300 - fast*9 - camX*0.6, W + 300) - 150;
+      ctx.fillStyle = '#1a0b1e'; ctx.fillRect(px, 120, 6, GROUND - 120); ctx.fillRect(px - 16, 128, 38, 4); }
+    ctx.fillStyle = '#1a0b1e'; ctx.fillRect(0, GROUND + 20, W, H - GROUND);
+    ctx.fillStyle = '#4a4458'; ctx.fillRect(0, H - 20, W, 4);
+    ctx.fillStyle = '#2b2b33'; for (let i = 0; i < 30; i++){ const tx = mod(i*40 - fast*12 - camX, W + 40) - 20; ctx.fillRect(tx, H - 16, 22, 6); }
+  },
   falls(){
     // cliffs drift past slowly as you climb; three sheets of falling water pour down behind the ledges
     const off = camY*0.3;
@@ -4027,6 +4236,25 @@ function drawSolid(s){
   if (s.x + s.w < camX - 30 || s.x > camX + W + 30 || s.y > camY + H + 20 || s.y + s.h < camY - 20) return;
   const x0 = Math.max(s.x, camX - 30), x1 = Math.min(s.x + s.w, camX + W + 30), BOT = camY + H;
   const gc = L.ground;
+  if (s.kind === 'ground' && s.car){
+    const top = s.y, body = s.engine ? '#2b2b33' : s.deck ? '#a8262f' : '#8a1f2a';
+    ctx.fillStyle = body; ctx.fillRect(x0, top + 6, x1 - x0, BOT - top);
+    ctx.fillStyle = '#f7c51e'; ctx.fillRect(x0, top + 40, x1 - x0, 4);
+    for (let wx = Math.ceil((x0 - s.x - 14)/36)*36 + s.x + 14; wx < x1 - 10; wx += 36){
+      if (wx < s.x + 10 || wx > s.x + s.w - 30) continue;
+      ctx.fillStyle = s.engine ? '#4a4458' : '#ffd879'; ctx.fillRect(wx, top + 14, 20, 18);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(wx, top + 28, 20, 4);
+    }
+    if (!s.deck) for (let wx = s.x + 40; wx < s.x + s.w - 20; wx += 90){
+      if (wx < x0 - 30 || wx > x1 + 30) continue;
+      circle(wx, top + 60, 13, '#1a1622'); circle(wx, top + 60, 5, '#8d99a8');
+      const a = time*22; ctx.strokeStyle = '#8d99a8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(wx + Math.cos(a)*11, top + 60 + Math.sin(a)*11); ctx.lineTo(wx - Math.cos(a)*11, top + 60 - Math.sin(a)*11); ctx.stroke();
+    }
+    block(x0, top, x1 - x0, 8, '#3a3446', false); studRow(Math.max(x0, s.x), Math.min(x1, s.x + s.w), top, '#3a3446');
+    if (s.x >= x0){ ctx.fillStyle = '#2b1a20'; ctx.fillRect(s.x, top + 6, 4, BOT - top); }
+    if (s.x + s.w <= x1){ ctx.fillStyle = '#2b1a20'; ctx.fillRect(s.x + s.w - 4, top + 6, 4, BOT - top); }
+    return;
+  }
   if (s.kind === 'ground'){
     const top = s.y;
     if (L.groundStyle === 'cloud'){
@@ -4119,6 +4347,17 @@ function drawLava(){
     for (let x = p.x; x < p.x + p.w; x += 8) ctx.fillRect(x, H - 26 + Math.sin(time*3 + x*0.1)*2, 8, 6);
     ctx.fillStyle = '#ffd23f';
     for (let x = p.x + 4; x < p.x + p.w; x += 22) if (Math.sin(time*2 + x) > 0.5) ctx.fillRect(x, H - 22, 4, 4);
+  }
+}
+function drawWires(){
+  for (const wr of wires){
+    if (wr.x + wr.w < camX - 20 || wr.x > camX + W + 20) continue;
+    const y = wr.y + wr.h/2;
+    ctx.fillStyle = '#2b2b33'; ctx.fillRect(wr.x - 6, wr.y - 4, 8, 18); ctx.fillRect(wr.x + wr.w - 2, wr.y - 4, 8, 18);
+    ctx.strokeStyle = 'rgba(255,240,120,0.35)'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(wr.x, y); ctx.lineTo(wr.x + wr.w, y); ctx.stroke();
+    ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(wr.x, y);
+    for (let k = 1; k < 10; k++) ctx.lineTo(wr.x + wr.w*k/10, y + (Math.random()*2 - 1)*4);
+    ctx.lineTo(wr.x + wr.w, y); ctx.stroke();
   }
 }
 function drawSpikes(){
@@ -4476,6 +4715,40 @@ function drawEagle(e, C){
   }
   ctx.restore();
 }
+function drawRabbit(e, C){
+  const x = e.x, y = e.y, w = e.w, h = e.h, cx = x + w/2, d = e.dir;
+  // ears, body, belly, face
+  for (const sd of [-1, 1]){ block(cx + sd*14 - 7, y - 30, 14, 40, C('#f2eff8'), false); ctx.fillStyle = C('#ffb3e0'); ctx.fillRect(cx + sd*14 - 3, y - 24, 6, 30); }
+  block(x + 6, y + 8, w - 12, h - 8, C('#f2eff8'));
+  ctx.fillStyle = C('#e2dff0'); ctx.fillRect(x + 18, y + 34, w - 36, h - 44);
+  ctx.fillStyle = C('#ff3a7a'); ctx.fillRect(cx + d*8 - 4, y + 18, 7, 7); ctx.fillRect(cx + d*22 - 4, y + 18, 7, 7);
+  ctx.fillStyle = C('#ff9ac8'); ctx.fillRect(cx + d*16 - 3, y + 28, 6, 4);
+  ctx.fillStyle = C('#c9c6d6'); ctx.fillRect(x + 10, y + h - 8, 18, 8); ctx.fillRect(x + w - 28, y + h - 8, 18, 8);
+  // the mochi mallet: raised, then swung down
+  const sw = e.mallet > 0 ? (e.mallet > 0.2 ? -1.6 : 0.6) : -0.4;
+  ctx.save(); ctx.translate(cx + d*26, y + 40); ctx.scale(d, 1); ctx.rotate(sw);
+  ctx.fillStyle = C('#8b5a2b'); ctx.fillRect(-3, -52, 6, 52);
+  block(-18, -70, 36, 22, C('#a8743f'), false); ctx.fillStyle = C('#6b4420'); ctx.fillRect(-18, -62, 36, 4);
+  ctx.restore();
+}
+function drawKabuto(e, C){
+  const x = e.x, y = e.y, w = e.w, h = e.h, cx = x + w/2, d = e.dir;
+  // rotors
+  const ra = time*40;
+  ctx.fillStyle = 'rgba(220,220,230,0.5)';
+  for (const sd of [-1, 1]){ const rx = cx + sd*28, l = 34*Math.abs(Math.cos(ra + sd)); ctx.fillRect(rx - l, y - 8, l*2, 3); }
+  ctx.fillStyle = C('#4a4458'); ctx.fillRect(cx - 30, y - 6, 4, 10); ctx.fillRect(cx + 26, y - 6, 4, 10);
+  // shell
+  ctx.fillStyle = C('#2b2b33'); ctx.beginPath(); ctx.ellipse(cx, y + h*0.55, w/2, h*0.5, 0, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x, y + h*0.55 - 1, w, h*0.3);
+  ctx.fillStyle = C('#e0442a'); ctx.fillRect(x + 10, y + h*0.55, w - 20, 5); ctx.fillRect(cx - 3, y + 6, 6, h*0.5);
+  // the great horn, pointing the way it flies
+  ctx.fillStyle = C('#3a3446'); ctx.beginPath(); ctx.moveTo(cx + d*(w/2 - 6), y + h*0.5); ctx.lineTo(cx + d*(w/2 + 30), y + 4); ctx.lineTo(cx + d*(w/2 + 20), y + 2); ctx.lineTo(cx + d*(w/2 - 16), y + h*0.35); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C('#ffd23f'); ctx.fillRect(cx + d*(w/2 - 14) - 4, y + h*0.6, 8, 6);
+  // twin cannons underneath
+  ctx.fillStyle = C('#1a1622'); ctx.fillRect(cx - 24, y + h - 6, 10, 10); ctx.fillRect(cx + 14, y + h - 6, 10, 10);
+  if (e.st === 'charge' || e.st === 'swoop'){ ctx.fillStyle = `rgba(255,80,40,${0.5 + 0.5*Math.sin(time*30)})`; ctx.fillRect(x + 6, y + h*0.55 + 8, w - 12, 4); }
+}
 function drawOni(e, C){
   const x = e.x, y = e.y, w = e.w, h = e.h, cx = x + w/2, HW = 66, HH = 44, angry = e.hp < e.max/2;
   for (const hd of e.hands || []){
@@ -4527,6 +4800,10 @@ function drawStar(x, y, rot, gold, dark){
 function drawFoe(f){
   if (f.x < camX - 40 || f.x > camX + W + 40) return;
   if (f.kind === 'shuriken'){ ctx.save(); ctx.translate(f.x, f.y); ctx.scale(0.75, 0.75); drawStar(0, 0, f.rot, false, true); ctx.restore(); return; }
+  if (f.kind === 'fire' && f.meteor){
+    for (let k = 1; k <= 5; k++){ ctx.fillStyle = `rgba(255,${180 - k*20},60,${0.35 - k*0.05})`; ctx.beginPath(); ctx.arc(f.x - f.vx*0.02*k, f.y - f.vy*0.025*k, f.r*(1 - k*0.12), 0, 7); ctx.fill(); }
+    circle(f.x, f.y, f.r, '#8e8aa3'); circle(f.x - 2, f.y - 2, f.r*0.5, '#ffb15a'); return;
+  }
   if (f.kind === 'fire'){
     ctx.fillStyle = 'rgba(255,120,30,0.35)'; ctx.beginPath(); ctx.arc(f.x - f.vx*0.04, f.y - f.vy*0.04, f.r*0.8, 0, 7); ctx.fill();
     circle(f.x, f.y, f.r, '#ff6a1a'); circle(f.x, f.y, f.r*0.55, '#ffd23f'); return;
@@ -4558,6 +4835,15 @@ function drawHazard(h){
     const k = Math.min(1, h.t/h.warn);
     ctx.fillStyle = `rgba(20,50,90,${0.2 + 0.35*k})`; ctx.beginPath(); ctx.ellipse(h.x, (h.gy || GROUND) - 1, 6 + k*10, 3, 0, 0, 7); ctx.fill();
     ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.moveTo(h.x - 6, -2); ctx.lineTo(h.x + 6, -2); ctx.lineTo(h.x, 8 + k*8); ctx.closePath(); ctx.fill();
+  } else if (h.kind === 'meteor'){
+    const k = Math.min(1, h.t/h.warn);
+    ctx.strokeStyle = `rgba(255,120,60,${0.35 + 0.5*k})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(h.x, h.gy - 1, 6 + k*16, 3 + k*3, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = `rgba(255,200,120,${0.25*k})`; ctx.beginPath(); ctx.ellipse(h.x, h.gy - 1, 6 + k*16, 3 + k*3, 0, 0, 7); ctx.fill();
+  } else if (h.kind === 'wave'){
+    const a = 1 - Math.max(0, h.t - h.dur + 0.4)/0.4;
+    ctx.fillStyle = `rgba(225,220,245,${0.85*a})`;
+    for (let i = 0; i < 4; i++){ const hh = 22 - i*5; ctx.beginPath(); ctx.ellipse(h.x - h.dir*i*9, GROUND - hh/2, 9, hh/2, 0, 0, 7); ctx.fill(); }
   } else if (h.kind === 'tentacle'){
     if (h.t < h.warn){
       ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5;
@@ -4650,7 +4936,7 @@ function draw(){
   drawMechBack();
   for (const s of solids) drawSolid(s);
   for (const sc of secrets) drawSecret(sc);
-  drawSpikes();
+  drawSpikes(); drawWires();
   for (const s of studs) if (!s.got && s.x > camX - 20 && s.x < camX + W + 20) drawStud(s);
   for (const p of powerups){
     if (p.got || p.x < camX - 40 || p.x > camX + W + 40) continue;
@@ -4770,7 +5056,7 @@ function K(hex){
   return tintCache[key] = '#' + f(r) + f(g) + f(b);
 }
 const mapCol = col => ({leg:K(col.leg), body:K(col.body), belt:K(col.belt), trim:K(col.trim), hood:K(col.hood), skin:K(col.skin)});
-const ORD = ['One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten'];
+const ORD = ['One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve'];
 const CHAPTER_LINES = [
   'The Stone Shogun guards the first shard among the temple roofs.',
   'Cracked bamboo crumbles underfoot, and something green waits without moving.',
@@ -4781,7 +5067,9 @@ const CHAPTER_LINES = [
   'Nobody has ever beaten Raijin the Thunder Rider on his road. Take the wheel.',
   'Wind gusts and turning wheels guard the sky. The Storm Eagle rules them all.',
   'Climb the falls, ledge by ledge. At the top, a Stone Oni no ninja has ever passed.',
-  'Nine shards glow in the ninja’s pack. The last one waits past the crushers.'
+  'The moon is light underfoot. Meteors fall, and a giant rabbit is pounding mochi.',
+  'Run car to car along the Shadow Express. Mind the live wires overhead.',
+  'Eleven shards glow in the ninja’s pack. The last one waits past the crushers.'
 ];
 const SERIF = '"Shippori Mincho", "Hiragino Mincho ProN", Georgia, serif';
 
@@ -5013,7 +5301,7 @@ function makeIntro(){
       cRain(t, 0.45);
       cFlash(cLightning(t, [2.4, 5.1]));
     } },
-  { dur:8, cap:'Weeks before, the Shadow Master had cut the lantern into ten shards and given them to his ten fiercest guardians.',
+  { dur:8, cap:'Weeks before, the Shadow Master had cut the lantern into twelve shards and given them to his twelve fiercest guardians.',
     events:[[2.9, () => sfx.sword()], [3.2, () => { clack(10, 0.2); tone(300, 60, 0.8, 'sawtooth', 0.06); }]],
     draw(t){
       CM = 1;
@@ -5027,7 +5315,7 @@ function makeIntro(){
       if (t < 3.2) cLantern(cx + 50, cy, 1.6, 0.85 + Math.sin(t*4)*0.1, true);
       else {
         const k = t - 3.2;
-        for (let i = 0; i < 10; i++){ const a = i/10*Math.PI*2 + 0.3; cShard(cx + 50 + Math.cos(a)*k*190, cy + Math.sin(a)*k*130 + k*k*18, 7, k*6 + i, 1); }
+        for (let i = 0; i < 12; i++){ const a = i/12*Math.PI*2 + 0.3; cShard(cx + 50 + Math.cos(a)*k*190, cy + Math.sin(a)*k*130 + k*k*18, 7, k*6 + i, 1); }
       }
       cFlash(t > 3.15 && t < 3.7 ? (3.7 - t)*1.5 : 0);
     } },
@@ -5069,7 +5357,7 @@ function makeIntro(){
         ctx.font = `${W < 560 ? 32 : 40}px Bungee, "Arial Black", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = '#000000'; ctx.fillText('BRICK NINJA', W/2 + 3, 95);
         ctx.fillStyle = '#f5efe2'; ctx.fillText('BRICK NINJA', W/2, 92);
-        cTitleText('The Ten Shards of the Sun Lantern', W/2, 130, 15, '#f5efe2', 600);
+        cTitleText('The Twelve Shards of the Sun Lantern', W/2, 130, 15, '#f5efe2', 600);
         ctx.globalAlpha = 1;
       }
     } }
@@ -5157,7 +5445,7 @@ function makeEnding(){
       cRain(t, 0.35);
       cFlash(cLightning(t, [0.2, 3.4]));
     } },
-  { dur:8, cap:'He carried the ten shards home over the mountains. With every step, they glowed a little brighter.',
+  { dur:8, cap:'He carried the twelve shards home over the mountains. With every step, they glowed a little brighter.',
     draw(t){
       CM = 1;
       cSky('#6a7080','#a8acb4','#d8d6d0');
@@ -5167,7 +5455,7 @@ function makeEnding(){
       cRidge(ridgeB, '#33373e');
       const nx = W + 30 - t*(W + 60)/8, fy = ridgeB(nx);
       cNinja(nx, fy, 1.2, -1, t, {run:true, longScarf:true});
-      for (let i = 0; i < 10; i++){ const a = t*2 + i/10*Math.PI*2; cShard(nx + Math.cos(a)*24, fy - 24 + Math.sin(a)*9, 3.5, a, 0.4 + t/14); }
+      for (let i = 0; i < 12; i++){ const a = t*2 + i/12*Math.PI*2; cShard(nx + Math.cos(a)*24, fy - 24 + Math.sin(a)*9, 3.5, a, 0.4 + t/14); }
       cGrass(288, 140, '#4a5040', t, 1.0);
       cWind(t, 0.2);
     } },
@@ -5182,8 +5470,8 @@ function makeEnding(){
         if (r < W*1.4){ ctx.strokeStyle = 'rgba(255,240,200,0.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, ly, r, 0, 7); ctx.stroke(); }
       } else {
         const sx = W*0.44, sy = 262 - 30, p = clamp((t - 0.6)/2.6, 0, 1), e = p*p*(3 - 2*p);
-        for (let i = 0; i < 10; i++){
-          const a = i/10*Math.PI*2 + p*7, rr = (1 - e)*40 + 10*(1 - clamp((t - 3.2)/0.4, 0, 1));
+        for (let i = 0; i < 12; i++){
+          const a = i/12*Math.PI*2 + p*7, rr = (1 - e)*40 + 10*(1 - clamp((t - 3.2)/0.4, 0, 1));
           cShard(sx + (cx - sx)*e + Math.cos(a)*rr, sy + (ly - sy)*e + Math.sin(a)*rr*0.6, 5 + e*2, a, 0.6 + e*0.6);
         }
       }
@@ -5244,8 +5532,8 @@ function makeEnding(){
       cTitleText('The End', W/2, 152, 38, '#f5efe2');
       cTitleText('Brick Ninja · a game by Everett', W/2, 184, 14, '#d8cfbf', 600);
       const total = Object.values(progress.best).reduce((a, b) => a + b, 0);
-      cTitleText(`${total} studs collected across ten worlds`, W/2, 205, 13, '#b8af9e', 600);
-      for (let k = 0; k < 10; k++) cShard(W/2 + (k - 4.5)*22, 232, 5, Math.sin(t*2 + k)*0.2, 0.8);
+      cTitleText(`${total} studs collected across twelve worlds`, W/2, 205, 13, '#b8af9e', 600);
+      for (let k = 0; k < 12; k++) cShard(W/2 + (k - 5.5)*20, 232, 5, Math.sin(t*2 + k)*0.2, 0.8);
       ctx.globalAlpha = 1;
     } }
   ];
