@@ -347,10 +347,22 @@ const LEVELS = [
   pillar:['#4a4458','#5a5468'], wall:['#2e2938','#3a3446'], plats:['#7b3fa0','#5a5468','#d22b2b','#4a4458'],
   grunt:{body:'#1a1622', hood:'#1a1622', leg:'#0e0b14', eye:'#c06bff'}, hopper:'shadow', flyer:'ghost',
   hopP:0.35, flyP:0.3, throwP:0.4, throwKind:'shuriken', gaps:[80,110], steps:[0,40,0], pillarEvery:2, pillarH:[150,190],
-  particles:'motes', music:{t:-1, bpm:144, mel:'D', lead:'square', chords:true}, arena:[{dx:200,y:205,w:110},{dx:540,y:205,w:110}] }
+  particles:'motes', music:{t:-1, bpm:144, mel:'D', lead:'square', chords:true}, arena:[{dx:200,y:205,w:110},{dx:540,y:205,w:110}] },
+/* bonus world: a vertical climb up a waterfall, like the Waterfall stage in Contra. No shard; outside the story. */
+{ id:'falls', song:'megaA', bonus:true, vertical:true, vbot:2900, name:'Dragon Falls', bossName:'Stone Oni', boss:'oni', seed:73, end:616,
+  sky:['#0b2233','#14485e','#1f7a8c','#5fb8c4'], bg:'falls', accent:'#1f9fb8',
+  ground:{top:'#5aa84a', body:'#4f5a66', seam:'#3d4650', edge:'#2e353d'},
+  pillar:['#5f6a78','#717d8c'], wall:['#4a5563','#566272'], plats:['#6f7a90','#3fae49','#1d6fd0','#8d99a8'],
+  grunt:{body:'#2f7f8c', hood:'#123a4a', leg:'#123a4a'}, hopper:'crab', flyer:'bird',
+  hopP:0.3, flyP:0.3, throwP:0.35, throwKind:'shuriken', crumble:0.18, gaps:[70,100], steps:[0], pillarEvery:2, pillarH:[130,175],
+  particles:'spray', music:{t:2, bpm:150, mel:'C', lead:'square', chords:true}, arena:[] }
 ];
+const STORY = LEVELS.filter(lv => !lv.bonus);
+const worldLabel = i => LEVELS[i].bonus ? 'Bonus world' : `World ${i + 1}`;
 
 let LI = 0, L = LEVELS[0], LEVEL_END = 5600, ARENA = 4700, GR = G;
+let camY = 0; // vertical scroll, only moves in the vertical world
+const worldBot = () => L.vertical ? L.vbot : H;
 
 /* ---------- secret doors and the special weapons hidden behind them ----------
    Five worlds hide a cracked bit of wall on one stretch of ground (seg counts stretches from the start).
@@ -588,7 +600,7 @@ const SONGS = {
     if (st === 0) I.pad(t, mf([38,38,34,36][bar]), sp*16);
     if (s >= 16){ const n = MELS.D[bs]; if (n) I.flute(t, mf(n[1]), sp*n[2]); }
   }},
-  boss: { get bpm(){ return LI === LEVELS.length - 1 ? 168 : 160; }, step(s, t, sp){
+  boss: { get bpm(){ return L.id === 'fortress' ? 168 : 160; }, step(s, t, sp){
     const bs = s % 32, st = bs % 16, tr = MUS.t;
     if (st === 0 || st === 3 || st === 8 || st === 10 || st === 11) I.kick(t);
     if (st === 4 || st === 12) I.snare(t);
@@ -818,6 +830,7 @@ function buildLevel(){
   solids=[]; enemies=[]; studs=[]; powerups=[]; lavaPools=[]; lavaballs=[]; spikes=[]; hazards=[];
   wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[];
   LEVEL_END = L.end; ARENA = L.end - 900;
+  if (L.vertical){ buildVertical(); return; }
   const SEC = SECRETS[L.id];
   const addSecret = (gx, top) => { const st = progress.rooms[L.id] ? 'open' : 'hidden';
     secrets.push({x:gx, y:top, w:64, h:82, st, weapon:SEC.weapon, pop:0}); };
@@ -976,6 +989,48 @@ function buildLevel(){
   enemies.push(boss);
 }
 
+/* the climb: rows of ledges zig-zagging up between two slick waterfall walls, with the oni's arena on top */
+function buildVertical(){
+  const R = rng(L.seed), VB = L.vbot, X0 = 24, X1 = L.end, pc = i => L.plats[mod(i, L.plats.length)];
+  const studLine = (x, y, n) => { for (let i = 0; i < n; i++) studs.push({x:x + i*22, y, phys:false, t:0}); };
+  LEVEL_END = X1; ARENA = X0;
+  solids.push({x:-420, y:-200, w:X0 + 420, h:VB + 600, kind:'wall', slick:true});
+  solids.push({x:X1, y:-200, w:420, h:VB + 600, kind:'wall', slick:true});
+  solids.push({x:X0, y:VB, w:X1 - X0, h:200, kind:'ground'});
+  studLine(250, VB - 30, 6);
+  const lanes = [125, 320, 515];
+  let y = VB - 80, row = 0, lane = 1, ups = 0;
+  while (y > GROUND + 70){
+    lane = lane === 1 ? (R() < 0.5 ? 0 : 2) : 1;
+    const wide = row % 4 === 3, w = wide ? 180 : 110 + Math.floor(R()*3)*20;
+    const x = clamp(Math.round(lanes[lane] - w/2 + (R()*2 - 1)*18), X0 + 6, X1 - 6 - w);
+    const p = {x, y, w, h:16, kind:'plat', c:pc(row)};
+    if (!wide && row > 2 && R() < 0.16){ Object.assign(p, {mover:'x', x0:x, range:46, speed:1.2 + R()*0.5, phase:R()*6, dx:0, dy:0}); }
+    else if (!wide && row > 1 && R() < L.crumble) Object.assign(p, {crumble:true, cst:'idle', ct:0, fy:0, fvy:0, off:false, pop:0});
+    solids.push(p);
+    if (wide){
+      // a wide ledge: a guard stands on it
+      const thrower = R() < L.throwP;
+      enemies.push(makeEnemy(R() < L.hopP ? 'hopper' : 'grunt', x + w/2 - 11, y, thrower));
+      if (ups < 2 && row > 6){ powerups.push({x:x + w/2 - 10, y:y - 34, w:20, h:16, got:false}); ups++; }
+    } else if (R() < 0.55) studLine(x + 12, y - 26, Math.floor((w - 10)/22));
+    // sometimes a second ledge across the falls, with studs on it
+    if (R() < 0.35){
+      const l2 = lane === 1 ? (R() < 0.5 ? 0 : 2) : 2 - lane, w2 = 100;
+      const x2 = clamp(lanes[l2] - w2/2, X0 + 6, X1 - 6 - w2);
+      if (Math.abs(x2 - x) > w2 + 30){ solids.push({x:x2, y:y - 10, w:w2, h:16, kind:'plat', c:pc(row + 1)}); studLine(x2 + 12, y - 36, 4); }
+    }
+    if (row > 3 && row % 5 === 2) enemies.push(makeEnemy('flyer', lanes[2 - lane] - 12, y - 70, false));
+    y -= 78 + Math.floor(R()*3)*8; row++;
+  }
+  // the oni's arena: a floor you can jump up through, and two ledges for reaching its head
+  solids.push({x:X0, y:GROUND, w:X1 - X0, h:16, kind:'plat', c:'#8d99a8'});
+  solids.push({x:X0 + 24, y:200, w:110, h:16, kind:'plat', c:pc(1)}, {x:X1 - 134, y:200, w:110, h:16, kind:'plat', c:pc(1)});
+  studLine(X0 + 36, 174, 4); studLine(X1 - 122, 174, 4);
+  boss = makeBoss(L.boss, X0);
+  enemies.push(boss);
+}
+
 /* ---------- game state ---------- */
 let state = 'title', P, studCount = 0, camX = 0, shake = 0, winTimer = 0, time = 0, bannerT = 0;
 let stars = [], foes = [], debris = [], pops = [], puffs = [], shots = [], beams = [], shardFx = null;
@@ -993,7 +1048,8 @@ function resetLevel(){
   ROOM = null;
   if (L.race){ solids=[]; enemies=[]; studs=[]; powerups=[]; lavaPools=[]; lavaballs=[]; spikes=[]; hazards=[]; wheels=[]; currents=[]; sands=[]; crushers=[]; secrets=[]; boss = null; initRace(); }
   else buildLevel();
-  P = newPlayer(); studCount = 0; camX = 0; shake = 0; winTimer = 0; bannerT = 3.2;
+  P = newPlayer(); studCount = 0; camX = 0; camY = 0; shake = 0; winTimer = 0; bannerT = 3.2;
+  if (L.vertical){ P.x = 309; P.y = L.vbot - P.h; P.safeX = P.x; P.safeY = P.y; camY = clamp(P.y - H*0.58, 0, L.vbot + 60 - H); camX = (24 + L.end)/2 - W/2; }
   stars=[]; foes=[]; debris=[]; pops=[]; puffs=[]; shots=[]; beams=[]; shardFx = null;
 }
 
@@ -1139,6 +1195,7 @@ function solidAt(px, py, includePlat){
   }
   return null;
 }
+const clingAt = (px, py) => { const s = solidAt(px, py, false); return s && !s.slick ? s : null; };
 const toward = e => (P.x + P.w/2 < e.x + e.w/2 ? -1 : 1);
 function clampArena(e){
   e.hitEdge = false;
@@ -1171,7 +1228,7 @@ function throwProj(kind, x, y, dir, dx){
 /* ---------- player actions ---------- */
 /* aim: a held finger or mouse wins; otherwise up/down plus left/right give 8 directions */
 function aimAngle(af){
-  if (aimPtr.on) return Math.atan2(aimPtr.cy - (P.y + 15), aimPtr.cx + camX - (P.x + P.w/2));
+  if (aimPtr.on) return Math.atan2(aimPtr.cy + camY - (P.y + 15), aimPtr.cx + camX - (P.x + P.w/2));
   const h = P.cling ? 0 : (input.right ? 1 : 0) - (input.left ? 1 : 0);
   if (input.up) return h ? Math.atan2(-1, h) : -Math.PI/2;
   if (input.down) return h ? Math.atan2(1, h) : (P.onG ? (af > 0 ? 0 : Math.PI) : Math.PI/2);
@@ -1223,7 +1280,7 @@ function laserShot(x, y, ang){
   const c = Math.cos(ang), s = Math.sin(ang), hit = new Set(), dir = c >= 0 ? 1 : -1; let ex = x, ey = y, tent = false;
   for (let d = 0; d < 600; d += 6){
     const px = x + c*d, py = y + s*d; ex = px; ey = py;
-    if (solidAt(px, py, false) || py < -30 || py > H + 30) break;
+    if (solidAt(px, py, false) || py < camY - 30 || py > camY + H + 30) break;
     const b = {x:px - 6, y:py - 6, w:12, h:12};
     for (const e of enemies) if (hittable(e) && !hit.has(e) && overlap(b, e)){ hit.add(e); damage(e, dir, 2); burst(px, py, ['#ff4fd8','#ffffff'], 3, 0.4); }
     if (!tent && hitTentacles(b, dir)) tent = true;
@@ -1269,7 +1326,7 @@ function updateShots(dt){
       s.trail.unshift({x:s.x, y:s.y}); if (s.trail.length > 12) s.trail.pop();
       s.x += Math.cos(s.ang)*s.sp*dt; s.y += Math.sin(s.ang)*s.sp*dt;
       const b = {x:s.x - 7, y:s.y - 7, w:14, h:14};
-      let boom = s.life <= 0 || solidAt(s.x, s.y, false) || s.y > H + 20 || hitSecret(b);
+      let boom = s.life <= 0 || solidAt(s.x, s.y, false) || s.y > camY + H + 20 || hitSecret(b);
       if (!boom) for (const e of enemies) if (hittable(e) && overlap(b, e)){ boom = true; break; }
       if (!boom) for (const fo of foes) if (!fo.dead && Math.hypot(fo.x - s.x, fo.y - s.y) < fo.r + 7){ boom = true; break; }
       if (boom){ s.life = 0; explode(s.x, s.y); }
@@ -1351,7 +1408,7 @@ function doorAtPlayer(){
   return null;
 }
 function tapDoor(e){
-  const r = cv.getBoundingClientRect(), tx = (e.clientX - r.left)/r.width*W + camX, ty = (e.clientY - r.top)/r.height*H;
+  const r = cv.getBoundingClientRect(), tx = (e.clientX - r.left)/r.width*W + camX, ty = (e.clientY - r.top)/r.height*H + camY;
   for (const sc of secrets){
     if (sc.st !== 'open' || tx < sc.x - 10 || tx > sc.x + sc.w + 10 || ty < sc.y - sc.h - 30 || ty > sc.y + 10) continue;
     if (Math.abs(P.x + P.w/2 - (sc.x + sc.w/2)) > 90 || !P.onG) continue;
@@ -1576,6 +1633,42 @@ function dragonTrail(e){
   for (let i = 1; i <= 9; i++) e.segs.push(e.hist[Math.min(e.hist.length-1, i*8)]);
 }
 const BOSS = {
+  /* the Stone Oni at the top of Dragon Falls: a giant floating head that spits fire, with two stone fists
+     that hover, take aim at whoever is closest (a shadow shows where) and slam down onto the arena */
+  oni: { w:120, h:96, hp:26, c:['#7d8597','#4f5666','#ff4040','#3fae49'],
+    init(e){ e.x = (24 + 616)/2 - 60; e.homeX = e.x; e.homeY = 56; e.y = e.homeY; e.fireT = 2.4; e.mouth = 0;
+      e.hands = [{side:-1, x:e.x - 78, y:150, st:'idle', t:1.4}, {side:1, x:e.x + e.w + 12, y:150, st:'idle', t:2.8}]; },
+    idle(e, dt){ e.y = e.homeY + Math.sin(time*1.4)*4; },
+    update(e, dt){
+      const angry = e.hp < e.max/2, pcx = P.x + P.w/2, HW = 66, HH = 44;
+      e.x = e.homeX + Math.sin(e.t*0.5)*70; e.y = e.homeY + Math.sin(e.t*1.4)*6;
+      e.dir = pcx < e.x + e.w/2 ? -1 : 1;
+      e.mouth = Math.max(0, e.mouth - dt);
+      e.fireT -= dt;
+      if (e.fireT <= 0){
+        const cx = e.x + e.w/2, my = e.y + e.h - 16, base = Math.atan2(P.y + 15 - my, pcx - cx), n = angry ? 5 : 3;
+        for (let k = 0; k < n; k++){ const a = base + (k - (n - 1)/2)*0.3; shoot('fire', cx, my, Math.cos(a)*190, Math.sin(a)*190, 0, 8); }
+        e.mouth = 0.5; e.fireT = angry ? 2.1 : 2.9; tone(220, 90, 0.4, 'sawtooth', 0.05);
+      }
+      e.harm = [];
+      for (const h of e.hands){
+        h.t -= dt;
+        const homeX = h.side < 0 ? e.x - 78 : e.x + e.w + 12;
+        if (h.st === 'idle'){
+          h.x += (homeX - h.x)*Math.min(1, dt*3); h.y += (150 + Math.sin(e.t*2 + h.side)*8 - h.y)*Math.min(1, dt*3);
+          if (h.t <= 0){ h.st = 'aim'; h.t = angry ? 0.75 : 1.05; h.tx = clamp(pcx - HW/2, 30, 610 - HW); }
+        } else if (h.st === 'aim'){
+          h.x += (h.tx - h.x)*Math.min(1, dt*6);
+          if (h.t <= 0){ h.st = 'slam'; h.vy = 0; }
+        } else if (h.st === 'slam'){
+          h.vy += 2600*dt; h.y += h.vy*dt;
+          if (h.y >= GROUND - HH){ h.y = GROUND - HH; h.st = 'down'; h.t = 0.7; if (!reduceMotion) shake = Math.max(shake, 7); clack(6, 0.2); tone(90, 50, 0.3, 'sawtooth', 0.06); burst(h.x + HW/2, GROUND - 4, ['#7d8597','#c9d3df'], 8, 0.7); }
+        } else if (h.st === 'down'){ if (h.t <= 0) h.st = 'rise'; }
+        else if (h.st === 'rise'){ h.y -= 230*dt; if (h.y <= 150){ h.st = 'idle'; h.t = (angry ? 1.3 : 2.1) + Math.random(); } }
+        if (h.st === 'slam' || h.st === 'down') e.harm.push({x:h.x + 4, y:h.y + 4, w:HW - 8, h:HH - 4});
+      }
+    },
+    draw: drawOni },
   shogun: { w:56, h:76, hp:16, c:['#6b6f7a','#3a3d45','#d4a017','#d22b2b'],
     init(e){ e.timer = 3; e.throwT = 1.5; },
     update(e, dt){
@@ -2471,7 +2564,7 @@ function update(dt){
     s.pop = Math.max(0, s.pop - dt);
     if (s.cst === 'idle'){ if (playing && P.onG && P.under === s){ s.cst = 'shake'; s.ct = 0.55; tone(260,180,0.12,'square',0.025); } }
     else if (s.cst === 'shake'){ s.ct -= dt; if (s.ct <= 0){ s.cst = 'fall'; s.off = true; s.fy = 0; s.fvy = 0; clack(4, 0.12); } }
-    else if (s.cst === 'fall'){ s.fvy += G*dt; s.fy += s.fvy*dt; if (s.y + s.fy > H + 40){ s.cst = 'gone'; s.ct = 3; } }
+    else if (s.cst === 'fall'){ s.fvy += G*dt; s.fy += s.fvy*dt; if (s.y + s.fy > camY + H + 40){ s.cst = 'gone'; s.ct = 3; } }
     else if (s.cst === 'gone'){ s.ct -= dt; if (s.ct <= 0){ s.cst = 'idle'; s.off = false; s.fy = 0; s.pop = 0.4; } }
   }
   updateMechanics(dtE, playing);
@@ -2491,7 +2584,7 @@ function update(dt){
     P.climbing = false;
     if (P.cling){
       const side = P.cling, px = side > 0 ? P.x + P.w + 1 : P.x - 1;
-      const sHead = solidAt(px, P.y + 3, false), sFeet = solidAt(px, P.y + P.h - 3, false);
+      const sHead = clingAt(px, P.y + 3), sFeet = clingAt(px, P.y + P.h - 3);
       if (!sHead && !sFeet){ P.cling = 0; }
       else if (!sHead){
         P.y = sFeet.y - P.h - 0.5;
@@ -2534,7 +2627,7 @@ function update(dt){
       }
       if (!P.onG && dir && P.wjT <= 0){
         const px = dir > 0 ? P.x + P.w + 1 : P.x - 1;
-        if (solidAt(px, P.y + P.h/2, false) || solidAt(px, P.y + P.h - 3, false)){
+        if (clingAt(px, P.y + P.h/2) || clingAt(px, P.y + P.h - 3)){
           P.cling = dir; P.vx = 0; P.vy = 0; P.flip = 0; P.spin = 0; P.airJumps = 1;
         }
       }
@@ -2542,7 +2635,7 @@ function update(dt){
     P.run = P.onG && Math.abs(P.vx) > 30;
     if (P.x < 0) P.x = 0;
     if (P.y < -20) P.y = -20;
-    if (P.onG && P.under && P.under.kind==='ground' && P.x > P.under.x+12 && P.x+P.w < P.under.x+P.under.w-12){ P.safeX = P.x; P.safeY = P.y; }
+    if (P.onG && P.under && (P.under.kind==='ground' || (L.vertical && P.under.kind==='plat' && !P.under.crumble && !P.under.mover)) && P.x > P.under.x+12 && P.x+P.w < P.under.x+P.under.w-12){ P.safeX = P.x; P.safeY = P.y; }
     P.cd -= dt; P.scd -= dt; P.slash = Math.max(0, P.slash - dt);
     P.throwA = Math.max(0, P.throwA - dt); P.inv = Math.max(0, P.inv - dt); P.triple = Math.max(0, P.triple - dt);
     const af = P.cling ? -P.cling : P.face;
@@ -2563,11 +2656,12 @@ function update(dt){
 
     for (const sp of spikes) if (overlap(P, sp)) hurt(sp.x + sp.w/2);
 
-    const fell = L.lava ? (P.y + P.h > H - 20) : (P.y > H + 80);
+    // in the falls, dropping a long way below your last safe ledge counts as a fall
+    const fell = L.vertical ? P.y > P.safeY + H*0.9 : L.lava ? (P.y + P.h > H - 20) : (P.y > H + 80);
     if (fell){
       if (L.lava){ burst(P.x + P.w/2, H - 22, ['#ff8a1f','#ffd23f','#e0441a'], 10, 0.8); tone(300,80,0.3,'sawtooth',0.06); }
       P.hp--; sfx.hurt(); adaptTrial(false, 'fall');
-      if (P.hp <= 0){ P.hp = 0; P.y = H + 80; goDown(); }
+      if (P.hp <= 0){ P.hp = 0; P.y = camY + H + 80; goDown(); }
       else { P.x = P.safeX; P.y = P.safeY - 20; P.vx = 0; P.vy = 0; P.inv = 1.6; P.cling = 0; }
     }
   }
@@ -2576,7 +2670,7 @@ function update(dt){
   { const dt = dtE;
   for (const e of enemies){
     if (e.dead) continue;
-    if (e.type !== 'boss' && e.type !== 'clone' && Math.abs(e.x - P.x) > W*1.3) continue;
+    if (e.type !== 'boss' && e.type !== 'clone' && (Math.abs(e.x - P.x) > W*1.3 || Math.abs(e.y - P.y) > H*1.4)) continue;
     e.t += dt; e.flash = Math.max(0, e.flash - dt);
     if (e.type === 'grunt'){
       if (e.thrower){
@@ -2627,7 +2721,7 @@ function update(dt){
     } else if (e.type === 'boss'){
       const B = BOSS[e.kind];
       if (!e.active){
-        if (playing && P.x > e.arenaX + 60){
+        if (playing && (L.vertical ? P.onG && P.y + P.h <= GROUND + 2 : P.x > e.arenaX + 60)){
           e.active = true; sfx.boss(); musicPlay('boss'); shake = 6;
           pops.push({x:Math.min(e.x + e.w/2, camX + W - 120), y:Math.max(60, e.y - 20), txt:L.bossName.toUpperCase() + '!', life:1.8});
         } else { if (B.idle) B.idle(e, dt); else bossGround(e, dt); continue; }
@@ -2636,7 +2730,7 @@ function update(dt){
       B.update(e, dt);
       if (playing && e.harm) for (const r of e.harm) if (overlap(P, r)) hurt(r.x + r.w/2);
     }
-    if (e.y > H + 120){ e.dead = true; continue; }
+    if (e.y > worldBot() + 120){ e.dead = true; continue; }
     if (playing && !e.hidden && !e.calm && overlap(P, e)) hurt(e.x + e.w/2);
   }
 
@@ -2674,7 +2768,7 @@ function update(dt){
       if (f.x < boss.arenaX - 30 || f.x > LEVEL_END - f.r) shatter(f);
     } else if (solidAt(f.x, f.y + f.r*0.6, false)) shatter(f);
     if (f.dead) continue;
-    if (f.y > H + 50 || f.x < camX - 300 || f.x > camX + W + 300) { f.dead = true; continue; }
+    if (f.y > camY + H + 50 || f.y < camY - 300 || f.x < camX - 300 || f.x > camX + W + 300) { f.dead = true; continue; }
     if (f.kind !== 'bigsnow'){
       for (const s of stars){ if (s.life > 0 && Math.abs(s.x - f.x) < f.r + 8 && Math.abs(s.y - f.y) < f.r + 8){ s.life = 0; shatter(f); break; } }
     }
@@ -2732,7 +2826,7 @@ function update(dt){
       if (s && d.y - d.vy*dt <= s.y + 2){ d.y = s.y - d.h/2; d.vy *= -0.35; d.vx *= 0.65; d.vr *= 0.5; if (Math.abs(d.vy) < 40) d.vy = 0; }
     }
   }
-  debris = debris.filter(d => d.life > 0 && d.y < H + 60);
+  debris = debris.filter(d => d.life > 0 && d.y < camY + H + 60);
 
   // studs
   const pcx = P.x + P.w/2, pcy = P.y + P.h/2;
@@ -2742,7 +2836,7 @@ function update(dt){
     if (s.phys){
       s.age += dt; s.vy += GR*dt; s.x += s.vx*dt; s.y += s.vy*dt;
       if (s.vy > 0){ const sol = solidAt(s.x, s.y+6, true); if (sol && s.y - s.vy*dt <= sol.y + 2){ s.y = sol.y - 6; s.vy *= -0.4; s.vx *= 0.7; if (Math.abs(s.vy) < 50){ s.vy = 0; s.vx = 0; } } }
-      if (s.y > H + 40) s.got = true;
+      if (s.y > worldBot() + 40) s.got = true;
     }
     if (playing && (!s.phys || s.age > 0.25) && Math.abs(s.x - pcx) < 18 && Math.abs(s.y - pcy) < 24){
       s.got = true; studCount++; sfx.stud();
@@ -2762,6 +2856,13 @@ function update(dt){
   pops = pops.filter(p => p.life > 0);
 
   // camera
+  if (L.vertical){
+    camX = (24 + L.end)/2 - W/2;
+    const ty = boss && boss.active && !boss.dead ? 0 : P.y - H*0.58;
+    camY += (ty - camY)*Math.min(1, dt*5);
+    camY = clamp(camY, 0, L.vbot + 60 - H);
+    shake = Math.max(0, shake - dt*30);
+  } else {
   let target = P.x - W*0.38;
   if (boss && boss.active && !boss.dead){
     const bc = boss.x + boss.w/2;
@@ -2770,6 +2871,7 @@ function update(dt){
   camX += (target - camX) * Math.min(1, dt*(boss && boss.active ? 3 : 6));
   camX = Math.max(0, Math.min(LEVEL_END + 60 - W, camX));
   shake = Math.max(0, shake - dt*30);
+  }
 
   if (winTimer > 0 && state === 'play'){
     winTimer -= dt;
@@ -3415,6 +3517,23 @@ function puffCloud(x, y, r, c){
   ctx.fill(); ctx.fillRect(x - r*1.5, y + r*0.3, r*3, r*0.6);
 }
 const BG = {
+  falls(){
+    // cliffs drift past slowly as you climb; three sheets of falling water pour down behind the ledges
+    const off = camY*0.3;
+    for (let i = 0; i < 7; i++){
+      const cx = (i/6)*W, top = mod(hash(i*3.3)*H*1.2 - off*0.5, H*1.6) - H*0.3;
+      ctx.fillStyle = i % 2 ? '#0f3242' : '#133a4c'; ctx.fillRect(cx - 40, top, 90, H*1.4);
+    }
+    for (const [f, bw] of [[0.2, 70], [0.5, 120], [0.8, 80]]){
+      const x0 = W*f - bw/2;
+      ctx.fillStyle = 'rgba(160,220,240,0.22)'; ctx.fillRect(x0, 0, bw, H);
+      ctx.fillStyle = 'rgba(220,245,255,0.5)';
+      for (let k = 0; k < 16; k++){ const sx = x0 + hash(k*7 + f*31)*bw, sy = mod(hash(k*13 + f*17)*H + time*(300 + hash(k)*160) - camY*0.6, H + 60) - 40; ctx.fillRect(sx, sy, 2, 26 + hash(k + 4)*20); }
+    }
+    // spray and the pool at the very bottom
+    const pool = L.vbot - camY;
+    if (pool < H + 40){ ctx.fillStyle = 'rgba(200,240,255,0.25)'; ctx.fillRect(0, pool - 30, W, 40); }
+  },
   temple(){
     steppedDisc(W*0.68, 236, 74, '#ffd879', '#ffc35c');
     steppedMountains(0.15, 220, '#4a2370', 70, 100, 280, 0);
@@ -3595,6 +3714,10 @@ function drawParticles(){
       if (i > 14) break;
       const x = mod(a*W*1.5 - time*(260 + b*140) - camX*0.3, W + 80) - 40, y = 30 + b*240;
       ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x, y, 36, 1.5);
+    } else if (kind === 'spray'){
+      if (i > 30) break;
+      const x = mod(a*W*1.3 + Math.sin(time + i)*10, W), y = mod(b*H + time*(160 + a*120), H);
+      ctx.fillStyle = 'rgba(220,245,255,0.55)'; ctx.fillRect(x, y, 1.5, 5);
     } else if (kind === 'motes'){
       if (i > 26) break;
       const x = mod(a*W*1.3 + time*(8 + b*10) - camX*0.5, W), y = mod(b*H - time*(6 + a*8), H);
@@ -3605,13 +3728,13 @@ function drawParticles(){
 
 /* ---------- world drawing ---------- */
 function drawSolid(s){
-  if (s.x + s.w < camX - 30 || s.x > camX + W + 30) return;
-  const x0 = Math.max(s.x, camX - 30), x1 = Math.min(s.x + s.w, camX + W + 30);
+  if (s.x + s.w < camX - 30 || s.x > camX + W + 30 || s.y > camY + H + 20 || s.y + s.h < camY - 20) return;
+  const x0 = Math.max(s.x, camX - 30), x1 = Math.min(s.x + s.w, camX + W + 30), BOT = camY + H;
   const gc = L.ground;
   if (s.kind === 'ground'){
     const top = s.y;
     if (L.groundStyle === 'cloud'){
-      ctx.fillStyle = gc.body; ctx.fillRect(x0, top + 6, x1 - x0, H - top);
+      ctx.fillStyle = gc.body; ctx.fillRect(x0, top + 6, x1 - x0, BOT - top);
       ctx.fillStyle = 'rgba(160,190,230,0.35)'; ctx.fillRect(x0, top + 36, x1 - x0, 3); ctx.fillRect(x0, top + 64, x1 - x0, 3);
       for (let px = Math.floor(x0/18)*18; px < x1; px += 18){
         if (px < s.x - 2 || px > s.x + s.w - 14) continue;
@@ -3620,15 +3743,15 @@ function drawSolid(s){
       ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, top + 4, x1 - x0, 10);
       return;
     }
-    ctx.fillStyle = gc.body; ctx.fillRect(x0, top+8, x1-x0, H - top);
+    ctx.fillStyle = gc.body; ctx.fillRect(x0, top+8, x1-x0, BOT - top);
     ctx.fillStyle = gc.seam;
-    for (let ry = top + 8, row = 0; ry < H; ry += 12, row++){
+    for (let ry = top + 8, row = 0; ry < BOT; ry += 12, row++){
       ctx.fillRect(x0, ry, x1-x0, 1.5);
       const off = row % 2 ? 16 : 0;
       for (let bx = s.x + off + Math.floor((x0 - s.x - off)/32)*32; bx < x1; bx += 32) if (bx >= x0) ctx.fillRect(bx, ry, 1.5, 12);
     }
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    for (let ry = top + 10; ry < H; ry += 12) ctx.fillRect(x0, ry, x1-x0, 1);
+    for (let ry = top + 10; ry < BOT; ry += 12) ctx.fillRect(x0, ry, x1-x0, 1);
     if (gc.crack){
       ctx.fillStyle = `rgba(255,106,26,${0.55 + 0.25*Math.sin(time*3)})`;
       for (let cx = Math.floor(x0/48)*48; cx < x1; cx += 48){
@@ -3639,8 +3762,8 @@ function drawSolid(s){
     }
     block(x0, top, x1-x0, 9, gc.top, false);
     studRow(Math.max(x0, s.x), Math.min(x1, s.x+s.w), top, gc.top);
-    if (s.x >= x0){ ctx.fillStyle = gc.edge; ctx.fillRect(s.x, top+8, 3, H-top); }
-    if (s.x + s.w <= x1){ ctx.fillStyle = gc.edge; ctx.fillRect(s.x+s.w-3, top+8, 3, H-top); }
+    if (s.x >= x0){ ctx.fillStyle = gc.edge; ctx.fillRect(s.x, top+8, 3, BOT-top); }
+    if (s.x + s.w <= x1){ ctx.fillStyle = gc.edge; ctx.fillRect(s.x+s.w-3, top+8, 3, BOT-top); }
   } else if (s.kind === 'plat'){
     if (s.jelly){ drawJelly(s); return; }
     if (s.crumble){
@@ -3674,11 +3797,10 @@ function drawSolid(s){
   } else {
     const wall = s.kind === 'wall';
     const cols = wall ? L.wall : L.pillar, cA = cols[0], cB = cols[1];
-    const yEnd = Math.min(H, s.y + s.h);
-    for (let y = s.y, row = 0; y < yEnd; y += 12, row++){
-      if (y + 12 < -4) continue;
-      const off = row % 2 ? 0 : 9;
-      for (let x = s.x - off; x < s.x + s.w; x += 18){
+    const yEnd = Math.min(BOT, s.y + s.h), r0 = Math.max(0, Math.floor((camY - 16 - s.y)/12));
+    for (let y = s.y + r0*12, row = r0; y < yEnd; y += 12, row++){
+      const off = row % 2 ? 0 : 9, xs = s.x - off + Math.max(0, Math.floor((camX - 40 - (s.x - off))/18))*18, xe = Math.min(s.x + s.w, camX + W + 40);
+      for (let x = xs; x < xe; x += 18){
         const bx = Math.max(s.x, x), bw = Math.min(s.x+s.w, x+18) - bx;
         block(bx, y, bw, Math.min(12, yEnd - y), (row + Math.round(x/18)) % 3 ? cA : cB, false);
       }
@@ -4058,6 +4180,31 @@ function drawEagle(e, C){
   }
   ctx.restore();
 }
+function drawOni(e, C){
+  const x = e.x, y = e.y, w = e.w, h = e.h, cx = x + w/2, HW = 66, HH = 44, angry = e.hp < e.max/2;
+  for (const hd of e.hands || []){
+    if (hd.st === 'aim' || hd.st === 'slam'){ ctx.fillStyle = `rgba(0,0,0,${0.25 + 0.2*Math.sin(time*20)})`; ctx.beginPath(); ctx.ellipse(hd.x + HW/2, GROUND - 1, HW*0.55, 6, 0, 0, 7); ctx.fill(); }
+    block(hd.x, hd.y, HW, HH, C('#6f7a90'));
+    ctx.fillStyle = C('#4f5666'); for (let k = 0; k < 4; k++) ctx.fillRect(hd.x + 6 + k*15, hd.y + 8, 11, 13);
+    ctx.fillStyle = C('#8d99a8'); ctx.fillRect(hd.x + (hd.side < 0 ? HW - 14 : 4), hd.y + 24, 10, 16);
+    ctx.fillStyle = C('#3fae49'); ctx.fillRect(hd.x + 10, hd.y + HH - 6, 16, 4);
+  }
+  // horns
+  ctx.fillStyle = C('#e8e2d0');
+  for (const sd of [-1, 1]){ ctx.beginPath(); ctx.moveTo(cx + sd*38, y + 14); ctx.lineTo(cx + sd*62, y - 18); ctx.lineTo(cx + sd*54, y + 16); ctx.closePath(); ctx.fill(); }
+  block(x, y + 10, w, h - 10, C('#7d8597'));
+  ctx.fillStyle = C('#5f6878'); ctx.fillRect(x + 8, y + 30, w - 16, 10);
+  // moss on the old stone
+  ctx.fillStyle = C('#3fae49'); ctx.fillRect(x + 6, y + 12, 22, 5); ctx.fillRect(x + w - 34, y + 12, 18, 5); ctx.fillRect(x + w - 16, y + 40, 6, 18);
+  // glowing eyes and a mouth that opens to spit fire
+  const glow = angry ? '#ff6a1a' : '#ff4040', ey = y + 44;
+  for (const sd of [-1, 1]){ ctx.fillStyle = C('#1a1622'); ctx.fillRect(cx + sd*26 - 12, ey, 24, 14); ctx.fillStyle = C(glow); ctx.fillRect(cx + sd*26 - 8, ey + 3, 16, 8); }
+  const mo = 6 + e.mouth*24;
+  ctx.fillStyle = C('#1a1622'); ctx.fillRect(cx - 28, y + 68, 56, mo);
+  if (e.mouth > 0){ ctx.fillStyle = `rgba(255,140,30,${e.mouth*1.6})`; ctx.fillRect(cx - 20, y + 70, 40, mo - 4); }
+  ctx.fillStyle = C('#f2ece0'); for (let k = 0; k < 5; k++) ctx.fillRect(cx - 26 + k*11, y + 68, 7, 5);
+  ctx.fillRect(cx - 34, y + 64, 6, 14); ctx.fillRect(cx + 28, y + 64, 6, 14);
+}
 function drawEnemy(e){
   if (e.hidden){ if (e.kind === 'scorpion' && e.st === 'under') drawBurrow(e); return; }
   if (e.kind !== 'dragon' && (e.x + e.w < camX - 80 || e.x > camX + W + 80)) return;
@@ -4186,7 +4333,7 @@ function drawHUD(){
     const a = Math.min(1, bannerT/0.6, (3.2 - bannerT)/0.3);
     ctx.globalAlpha = Math.max(0, a); ctx.textAlign = 'center';
     ctx.font = '12px Bungee, "Arial Black", sans-serif';
-    ctx.fillStyle = '#2b1a00'; ctx.fillText(`WORLD ${LI+1}`, W/2 + 1, 76); ctx.fillStyle = '#fff6e3'; ctx.fillText(`WORLD ${LI+1}`, W/2, 75);
+    ctx.fillStyle = '#2b1a00'; ctx.fillText(worldLabel(LI).toUpperCase(), W/2 + 1, 76); ctx.fillStyle = '#fff6e3'; ctx.fillText(worldLabel(LI).toUpperCase(), W/2, 75);
     ctx.font = '26px Bungee, "Arial Black", sans-serif';
     ctx.fillStyle = '#2b1a00'; ctx.fillText(L.name.toUpperCase(), W/2 + 2, 104); ctx.fillStyle = '#ffd23f'; ctx.fillText(L.name.toUpperCase(), W/2, 102);
     ctx.globalAlpha = 1;
@@ -4201,7 +4348,7 @@ function draw(){
   BG[L.bg]();
   const sh = (shake > 0 && !reduceMotion && state !== 'pause') ? shake : 0;
   ctx.save();
-  ctx.translate(-Math.round(camX) + (Math.random()*2-1)*sh, (Math.random()*2-1)*sh);
+  ctx.translate(-Math.round(camX) + (Math.random()*2-1)*sh, -Math.round(camY) + (Math.random()*2-1)*sh);
   if (L.lava) drawLava();
   drawMechBack();
   for (const s of solids) drawSolid(s);
@@ -4218,7 +4365,7 @@ function draw(){
   }
   for (const h of hazards) if (h.kind !== 'bolt') drawHazard(h);
   for (const e of enemies) if (!e.dead) drawEnemy(e);
-  if (state !== 'down' || P.y < H){
+  if (state !== 'down' || P.y < camY + H){
     const blink = P.inv > 0 && Math.floor(time*16) % 2 === 0;
     if (P.spin > 0){
       // spinning slash: two full turns with the sword held straight out, trailing a whirl of light
@@ -4296,7 +4443,7 @@ function draw(){
   drawWindFx();
   if (L.water){ ctx.fillStyle = 'rgba(30,130,210,0.10)'; ctx.fillRect(0, 0, W, H); }
   if (L.dark){
-    const sx = P.x + P.w/2 - camX, sy = P.y + 17;
+    const sx = P.x + P.w/2 - camX, sy = P.y + 17 - camY;
     const g = ctx.createRadialGradient(sx, sy, 70, sx, sy, Math.max(W, H)*0.8);
     g.addColorStop(0, 'rgba(5,3,15,0)'); g.addColorStop(1, 'rgba(5,3,15,0.6)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -4637,14 +4784,15 @@ function chapterScene(i){
       const a = clamp(t/0.6, 0, 1);
       ctx.globalAlpha = a*0.9; steppedDisc(W/2, 104, 38, '#c8322c', '#b02a24');
       ctx.globalAlpha = a;
-      cTitleText(`CHAPTER ${ORD[i].toUpperCase()}`, W/2, 160, 13, '#d8cfbf', 600);
+      const bonus = !!LEVELS[i].bonus;
+      cTitleText(bonus ? 'BONUS WORLD' : `CHAPTER ${ORD[i].toUpperCase()}`, W/2, 160, 13, '#d8cfbf', 600);
       cTitleText(LEVELS[i].name, W/2, 192, 30, '#f5efe2');
       ctx.font = `600 14px ${SERIF}`;
-      const lines = wrapLines(CHAPTER_LINES[i], Math.min(W - 60, 520), 'ch');
+      const lines = wrapLines(bonus ? 'No shard waits at the top of the falls. Only a stone oni that no ninja has ever beaten. Climb.' : CHAPTER_LINES[i], Math.min(W - 60, 520), 'ch' + i);
       lines.forEach((ln, k) => { ctx.fillStyle = '#cfc6b4'; ctx.fillText(ln, W/2, 224 + k*20); });
-      for (let k = 0; k < LEVELS.length; k++){
-        const sx = W/2 + (k - (LEVELS.length - 1)/2)*24, sy = 268;
-        if (progress.beaten[LEVELS[k].id]) cShard(sx, sy, 6, 0, 0.6);
+      for (let k = 0; k < (bonus ? 0 : STORY.length); k++){
+        const sx = W/2 + (k - (STORY.length - 1)/2)*24, sy = 268;
+        if (progress.beaten[STORY[k].id]) cShard(sx, sy, 6, 0, 0.6);
         else {
           ctx.strokeStyle = k === i ? `rgba(255,214,90,${0.5 + 0.5*Math.sin(t*6)})` : 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.moveTo(sx, sy - 6); ctx.lineTo(sx + 3.6, sy); ctx.lineTo(sx, sy + 6); ctx.lineTo(sx - 3.6, sy); ctx.closePath(); ctx.stroke();
@@ -4905,14 +5053,14 @@ function showLevels(){
     const b = document.createElement('button');
     b.className = 'lvl'; b.type = 'button';
     b.style.setProperty('--c', lv.accent); b.style.setProperty('--s', shade(lv.accent, 0.22));
-    b.innerHTML = `<span class="num">${i+1}</span><span class="nm">${lv.name}</span><span class="bs">Boss: ${lv.bossName}</span>` +
+    b.innerHTML = `<span class="num">${lv.bonus ? '\u2605 Bonus' : i+1}</span><span class="nm">${lv.name}</span><span class="bs">Boss: ${lv.bossName}</span>` +
       (SECRETS[lv.id] ? (progress.rooms[lv.id] === 'cleared' ? `<span class="sec">★ ${WEAPONS[SECRETS[lv.id].weapon].name}</span>`
         : progress.rooms[lv.id] ? '<span class="sec">★ Secret door found</span>' : '<span class="sec off">? Secret door</span>') : '') +
       (progress.beaten[lv.id] ? '<span class="ok">Cleared</span>' : '');
     b.addEventListener('click', () => startLevel(i));
     g.appendChild(b);
   });
-  $('endingBtn').hidden = !LEVELS.every(lv => progress.beaten[lv.id]);
+  $('endingBtn').hidden = !STORY.every(lv => progress.beaten[lv.id]);
   $('levelScreen').hidden = false;
 }
 function startLevel(i){
@@ -4933,7 +5081,7 @@ function playIntro(after){
 function playEnding(){ playCutscene(makeEnding(), null, 'story'); }
 function pauseGame(){
   if (state !== 'play') return;
-  state = 'pause'; $('pauseName').textContent = ROOM ? `World ${LI+1}: ${L.name} · Secret room` : `World ${LI+1}: ${L.name}`;
+  state = 'pause'; $('pauseName').textContent = `${worldLabel(LI)}: ${L.name}` + (ROOM ? ' · Secret room' : '');
   $('pauseScreen').hidden = false;
   saveAdapt(); updateAdaptStats(); drawStairPlot();
   for (const k of INPUT_KEYS) input[k] = false; aimPtr.on = false;
@@ -4947,18 +5095,20 @@ function resumeGame(){
 }
 function levelComplete(){
   state = 'win';
-  const lastLevel = LI === LEVELS.length - 1;
+  const lastLevel = L.id === 'fortress';
   progress.beaten[L.id] = true;
   progress.best[L.id] = Math.max(progress.best[L.id] || 0, studCount);
   saveAdapt();
   if (lastLevel){ playEnding(); return; }
-  const found = LEVELS.filter(lv => progress.beaten[lv.id]).length;
+  const found = STORY.filter(lv => progress.beaten[lv.id]).length;
   $('winEyebrow').textContent = L.race ? 'Raijin outraced' : `${L.bossName} smashed`;
   $('winTitle').textContent = 'Shard found!';
-  $('winText').textContent = `${found} of ${LEVELS.length} shards of the Sun Lantern. Next up: ${LEVELS[LI+1].name}, home of the ${LEVELS[LI+1].bossName}.`;
-  $('winShards').innerHTML = LEVELS.map(lv => `<span class="sh${progress.beaten[lv.id] ? ' on' : ''}"></span>`).join('');
+  $('winText').textContent = L.bonus ? `You climbed ${L.name} and beat the ${L.bossName}. That's the hardest climb in the game.`
+    : `${found} of ${STORY.length} shards of the Sun Lantern. Next up: ${LEVELS[LI+1].name}, home of the ${LEVELS[LI+1].bossName}.`;
+  if (L.bonus) $('winTitle').textContent = 'Bonus cleared!';
+  $('winShards').innerHTML = STORY.map(lv => `<span class="sh${progress.beaten[lv.id] ? ' on' : ''}"></span>`).join('');
   $('winStuds').textContent = studCount;
-  $('nextBtn').textContent = 'Next world';
+  $('nextBtn').textContent = L.bonus ? 'Climb again' : 'Next world';
   $('winScreen').hidden = false;
 }
 function syncAdaptUI(){
@@ -5030,7 +5180,7 @@ $('backTitle').addEventListener('click', () => { hideAll(); state = 'title'; $('
 $('continueBtn').addEventListener('click', () => {
   if (L.race){ beginLevel(LI); return; }
   P.hp = 5; P.inv = 2; P.vx = 0; P.vy = 0; P.cling = 0;
-  if (P.y > H - 30) { P.x = P.safeX; P.y = P.safeY - 20; }
+  if (L.vertical ? P.y > P.safeY + 60 : P.y > H - 30) { P.x = P.safeX; P.y = P.safeY - 20; }
   foes = []; hazards = [];
   hideAll(); state = 'play'; audioInit();
   musicPlay(boss.active && !boss.dead ? 'boss' : L.song);
@@ -5042,7 +5192,7 @@ $('pauseBtn').addEventListener('click', pauseGame);
 $('levelsBtn1').addEventListener('click', showLevels);
 $('levelsBtn2').addEventListener('click', showLevels);
 $('levelsBtn3').addEventListener('click', () => { if (AC) AC.resume(); showLevels(); });
-$('nextBtn').addEventListener('click', () => startLevel((LI + 1) % LEVELS.length));
+$('nextBtn').addEventListener('click', () => startLevel(L.bonus ? LI : (LI + 1) % LEVELS.length));
 $('soundBtn1').addEventListener('click', toggleSound);
 $('soundBtn2').addEventListener('click', toggleSound);
 $('musicBtn').addEventListener('click', toggleMusic);

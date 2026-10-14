@@ -29,6 +29,10 @@ Landing on a bad guy smashes it and bounces you off in a spinning sword slash th
 
 **In the race:** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
 
+## Bonus world: Dragon Falls
+
+A vertical climb up a waterfall, like the Waterfall stage in Contra. Ledges zig-zag up between two walls too slick to cling to; some crumble, some slide, and guards and birds wait along the way. Drop a long way below your last safe ledge and it counts as a fall. At the top, the Stone Oni floats over the arena: it spits fans of fire, and its two stone fists take aim (watch for the shadow) and slam down. Point the d-pad up to throw stars at its head, or jump from the side ledges and stomp it. Dragon Falls sits outside the nine-shard story, so it doesn't change the ending.
+
 ## Secret doors and special weapons
 
 Five worlds hide a secret door: a cracked bit of old wall standing in the background on one stretch of ground. Hit it with the sword, a star, a stomp or a special weapon and it crumbles into a glowing doorway. Press ↑ (or tap the door) to go in.
@@ -70,9 +74,10 @@ New mechanics build up as the game goes on.
 | 7 | Thunder Road | A third-person kart race | Raijin the Thunder Rider | Power metal |
 | 8 | Cloud Castle | Springs, wind gusts, turning platform wheels | Storm Eagle | Heroic NES |
 | 9 | Shadow Fortress | Darkness, spikes, crushers, elevators | Shadow Master | Power metal |
+| ★ | Dragon Falls (bonus) | A vertical climb | Stone Oni | Heroic NES |
 
 All the music is original and synthesized in the browser. Every world is open from the start. Cleared worlds and the story progress are saved in the browser.
 
 ## Making changes
 
-Open `index.html` in a browser to play locally. Worlds are defined in the `LEVELS` array, bosses in `BOSS`, songs in `SONGS`, the race in `initRace()` and `buildTrack()`, the story scenes in `makeIntro()`, `chapterScene()` and `makeEnding()`, the secret doors and their weapons in `SECRETS` and `WEAPONS`, and the corridor rooms in `roomGate()`, `roomUpdate()` and `roomDraw()`. All art is drawn in code on a canvas, so there are no asset files.
+Open `index.html` in a browser to play locally. Worlds are defined in the `LEVELS` array (the vertical one is built by `buildVertical()`), bosses in `BOSS`, songs in `SONGS`, the race in `initRace()` and `buildTrack()`, the story scenes in `makeIntro()`, `chapterScene()` and `makeEnding()`, the secret doors and their weapons in `SECRETS` and `WEAPONS`, and the corridor rooms in `roomGate()`, `roomUpdate()` and `roomDraw()`. All art is drawn in code on a canvas, so there are no asset files.
