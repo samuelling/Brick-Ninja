@@ -20,19 +20,36 @@ The whole game is one file, `index.html`, with no build step. It runs on phones 
 | Sword | Sword button | Z or J |
 | Ninja stars | Star button, or touch where you want them to go | X or K, or click where you want them to go |
 | Aim | Touch and hold the game | Hold ↑ or ↓ (with ← → for diagonals) while throwing |
-| Bow | Bow button (hold to power up) | C or L |
+| Special weapon | Special button (hold to keep firing) | C or L |
+| Go through a secret door | Tap the door | ↑ |
 | Pause | II | P or Esc |
 | Music on/off | Title or pause screen | M |
 
-Landing on a bad guy smashes it and bounces you off in a spinning sword slash that hits anything nearby. Landing on a boss knocks off two points of health. A fully charged arrow goes through up to three enemies and sticks in walls, where you can stand on it. Golden bricks give triple stars for a while.
+Landing on a bad guy smashes it and bounces you off in a spinning sword slash that hits anything nearby. Landing on a boss knocks off two points of health. Golden bricks give triple stars for a while.
 
-**In the race:** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or bow button uses turbo. Studs on the road refill the turbo meter.
+**In the race:** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
+
+## Secret doors and special weapons
+
+Five worlds hide a secret door: a cracked bit of old wall standing in the background on one stretch of ground. Hit it with the sword, a star, a stomp or a special weapon and it crumbles into a glowing doorway. Press ↑ (or tap the door) to go in.
+
+Inside is a corridor room seen from behind the ninja, like the base stages in Contra. Slide left and right, jump and double jump, throw stars down the hall (they aim at whatever you tap, or at the nearest target in your lane), and swing the sword to knock enemy stars out of the air. Each room has three gates. Lantern turrets on the back wall shield the core; knock them all out, smash the core and the wall falls. Grunts run out of side doors, and from the second gate on, spiked balls roll at your feet. Behind the third gate is the treasure: a weapon you can't get anywhere else.
+
+| World | Weapon | What it does |
+| --- | --- | --- |
+| Sunset Temple | Spread Stars | Five energy stars in a fan |
+| Bamboo Grove | Heat-Seeker Missiles | Homes in on the nearest bad guy and explodes |
+| Lava Volcano | Dragon Flame | A short-range flamethrower, hold to keep it going |
+| Desert Ruins | Laser Gun | An instant beam that goes through everything in a line |
+| Cloud Castle | Thunder Chain | Lightning that jumps between up to four enemies |
+
+The weapon goes in the special slot, stays when you leave the room, and is saved in the browser. You hold one at a time: winning another room swaps it out, and you can always go back through a cleared door to win an old one again. Getting knocked out in a room just sends you back to the door with the hearts you went in with. The world picker shows which worlds still hide a door.
 
 ## Adaptive difficulty
 
 The title and pause screens have a slider for the win rate the game should aim for, from 50% (tougher) to 95% (gentler). A weighted up-down staircase (Kaernbach, 1991) then tunes one difficulty level, D from 0 to 1, to hold you at that rate:
 
-- **Trials:** beating an enemy, knocking another sixth off a boss's health, passing a racer or spinning one out counts as a success. Getting hit, falling, crashing, being zapped or being passed counts as a failure.
+- **Trials:** beating an enemy (secret-room turrets and cores included), knocking another sixth off a boss's health, passing a racer or spinning one out counts as a success. Getting hit, falling, crashing, being zapped or being passed counts as a failure.
 - **Update rule:** after a success, D rises by step × (1 − p); after a failure, it falls by step × p, where p is the target. The level settles where your success rate equals p. The step starts at 0.12, shrinks by 15% at each reversal, and stops at 0.03 so it keeps tracking as worlds change.
 - **What D controls:** a shared clock for enemies, their projectiles, boss attacks, hazard warnings and moving traps (0.55× to 1.45× speed). It also sets how long you stay safe after a hit (2.4 s down to 1.0 s), boss health (0.6× to 1.4×), and the pace of the race rivals.
 
@@ -58,4 +75,4 @@ All the music is original and synthesized in the browser. Every world is open fr
 
 ## Making changes
 
-Open `index.html` in a browser to play locally. Worlds are defined in the `LEVELS` array, bosses in `BOSS`, songs in `SONGS`, the race in `initRace()` and `buildTrack()`, and the story scenes in `makeIntro()`, `chapterScene()` and `makeEnding()`. All art is drawn in code on a canvas, so there are no asset files.
+Open `index.html` in a browser to play locally. Worlds are defined in the `LEVELS` array, bosses in `BOSS`, songs in `SONGS`, the race in `initRace()` and `buildTrack()`, the story scenes in `makeIntro()`, `chapterScene()` and `makeEnding()`, the secret doors and their weapons in `SECRETS` and `WEAPONS`, and the corridor rooms in `roomGate()`, `roomUpdate()` and `roomDraw()`. All art is drawn in code on a canvas, so there are no asset files.
