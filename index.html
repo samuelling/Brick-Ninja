@@ -425,12 +425,13 @@ let camY = 0; // vertical scroll, only moves in the vertical world
 const worldBot = () => L.vertical ? L.vbot : H;
 
 /* ---------- secret doors and the special weapons hidden behind them ----------
-   Five worlds hide a cracked bit of wall on one stretch of ground (seg counts stretches from the start).
+   Six worlds hide a cracked bit of wall on one stretch of ground (seg counts stretches from the start).
    Break it, step through, and clear the corridor room behind it to win that world's weapon.
    The weapon goes in the special slot, stays when you leave the room, and is swapped out by the next one you win. */
 const SECRETS = {
   temple:  {seg:1, weapon:'spread'},
   bamboo:  {seg:2, weapon:'missile'},
+  snow:    {seg:2, weapon:'saw'},
   volcano: {seg:2, weapon:'flame'},
   desert:  {seg:3, weapon:'laser'},
   sky:     {seg:2, weapon:'chain'}
@@ -440,7 +441,8 @@ const WEAPONS = {
   missile: {name:'Heat-Seeker Missiles',  short:'MISSILES', col:'#ff6a4a', btn:'#b8341f', cd:0.55},
   flame:   {name:'Dragon Flame',          short:'FLAME',    col:'#ffa11f', btn:'#c25a12', cd:0.045},
   laser:   {name:'Laser Gun',             short:'LASER',    col:'#ff4fd8', btn:'#a3238a', cd:0.3},
-  chain:   {name:'Thunder Chain',         short:'THUNDER',  col:'#fff27a', btn:'#8f7a0c', cd:0.5}
+  chain:   {name:'Thunder Chain',         short:'THUNDER',  col:'#fff27a', btn:'#8f7a0c', cd:0.5},
+  saw:     {name:'Chainsaw',              short:'CHAINSAW', col:'#9be82a', btn:'#3f7f12', cd:0.05}
 };
 /* 24×24 icons, shared by the touch button (as SVG) and the canvas (as Path2D) */
 const WICON = {
@@ -448,7 +450,8 @@ const WICON = {
   missile: {d:'M5 10h11l6 2-6 2H5zM5 10L1.5 6H5l3.5 4zM5 14l-3.5 4H5l3.5-4z'},
   flame:   {d:'M12 2c1 4 6 6.5 6 12a6 6 0 0 1-12 0c0-3 1.5-5 3-7 0 2 .8 3.5 2.2 3.5C11 7.5 11 5 12 2z'},
   laser:   {d:'M1 9h11v4H8l-1 5H4l1-5H1zM13.5 10H23v2h-9.5z'},
-  chain:   {d:'M13 1L4 14h6l-2 9 10-13h-6z'}
+  chain:   {d:'M13 1L4 14h6l-2 9 10-13h-6z'},
+  saw:     {d:'M1 8h8v9H1zM2 8V5h6v3H6.5V6.5h-3V8zM9 10h11a3 3 0 0 1 0 6H9zM10 10l1-2 1 2 1-2 1 2 1-2 1 2 1-2 1 2 1-2 1 2 1-2 1 2z'}
 };
 const wiconSvg = id => { const ic = WICON[id];
   return `<svg viewBox="0 0 24 24" aria-hidden="true" ${ic.stroke ? 'fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"' : 'fill="currentColor"'}><path d="${ic.d}"/></svg>`; };
@@ -529,6 +532,10 @@ const sfx = {
   flame: () => { clack(3,0.06); tone(170,110,0.13,'sawtooth',0.022); },
   laser: () => tone(2300,480,0.17,'sawtooth',0.035),
   chain: () => { tone(2600,300,0.22,'square',0.03); clack(4,0.1); },
+  // chainsaw: a pull-cord rip that roars up, the engine chugging while you hold it, and a grind when it bites
+  sawStart: () => { clack(3,0.08); tone(70,230,0.32,'sawtooth',0.04,0.05); tone(140,460,0.3,'square',0.014,0.05); },
+  saw:   () => { tone(118+Math.random()*12,96,0.1,'sawtooth',0.03); tone(470+Math.random()*40,430,0.09,'square',0.011); },
+  grind: () => { tone(1250+Math.random()*300,700,0.07,'sawtooth',0.02); clack(1,0.07); },
   secret: () => [784,988,1175,1568].forEach((f,i)=>tone(f,f,0.14,'square',0.035,i*0.09)),
   door:  () => [392,523,659,784,1047,1319].forEach((f,i)=>tone(f,f*1.01,0.2,'triangle',0.05,i*0.07)),
   power: () => [523,659,784,1047].forEach((f,i)=>tone(f,f,0.12,'square',0.04,i*0.08)),
@@ -1553,6 +1560,27 @@ function fireSpecial(ang){
     P.flameT = 0.1; P.flameA = ang;
   } else if (id === 'laser') laserShot(hx, hy, ang);
   else if (id === 'chain') chainShot(hx, hy, ang);
+  else if (id === 'saw') sawCut(ang);
+}
+/* the chainsaw: hold to keep it running. The blade shreds anything it touches (each bad guy takes a hit
+   every 0.08 s), cuts enemy shots out of the air and cracks secret walls, but you have to get up close. */
+function sawCut(ang){
+  const c = Math.cos(ang), s = Math.sin(ang), ox = P.x + P.w/2, oy = P.y + 15, dir = c >= 0 ? 1 : -1;
+  let bit = false;
+  if (time - (P.sawS || 0) > 0.3) sfx.sawStart();
+  for (let d = 18; d <= 56; d += 9){
+    const px = ox + c*d, py = oy + s*d, b = {x:px - 9, y:py - 9, w:18, h:18};
+    for (const e of enemies){
+      if (!hittable(e) || !overlap(b, e) || (e.saw || 0) > time) continue;
+      e.saw = time + 0.08; damage(e, dir, 1); bit = true;
+      burst(px, py, ['#fff6a0','#ffd23f','#ffffff', WEAPONS.saw.col], 3, 0.45);
+    }
+    if (hitTentacles(b, dir)) bit = true;
+    for (const fo of foes) if (!fo.dead && Math.abs(fo.x - px) < fo.r + 9 && Math.abs(fo.y - py) < fo.r + 9){ shatter(fo); bit = true; }
+    hitSecret(b);
+  }
+  if (time - (P.sawS || 0) > 0.09){ P.sawS = time; sfx.saw(); }
+  if (bit && time - (P.sawG || 0) > 0.07){ P.sawG = time; sfx.grind(); if (!reduceMotion) shake = Math.max(shake, 1.5); }
 }
 function nearestFoe(x, y, maxD){
   let best = null, bd = maxD;
@@ -3402,6 +3430,21 @@ function roomSpecial(){
     if (time - (R.flameS || 0) > 0.12){ R.flameS = time; sfx.flame(); }
   } else if (id === 'laser') roomLaser(h, t);
   else if (id === 'chain') roomChain(h, t);
+  else if (id === 'saw') roomSaw();
+}
+/* in the corridor the chainsaw is for close work: it shreds grunts and spiked balls that get near you
+   and cuts their stars out of the air (the lanterns on the back wall still need stars) */
+function roomSaw(){
+  const R = ROOM, p = R.p; let bit = false;
+  if (time - (P.sawS || 0) > 0.3) sfx.sawStart();
+  for (const e of R.ents){
+    if (e.dead || (e.type !== 'grunt' && e.type !== 'roller') || e.z > RZ.pz + 0.85 || Math.abs(e.x - p.x) > 0.55 || (e.saw || 0) > time) continue;
+    e.saw = time + 0.08; roomDamage(e, 1); bit = true;
+    const c = rp(e.x, roomCY(e), e.z); roomFx(c.x, c.y, ['#fff6a0','#ffd23f','#ffffff', WEAPONS.saw.col], 4, 0.5);
+  }
+  for (const f of R.eshots) if (!f.dead && f.z < RZ.pz + 0.75 && Math.abs(f.x - p.x) < 0.55){ roomPop(f); bit = true; }
+  if (time - (P.sawS || 0) > 0.09){ P.sawS = time; sfx.saw(); }
+  if (bit && time - (P.sawG || 0) > 0.07){ P.sawG = time; sfx.grind(); R.shake = Math.max(R.shake, 2); }
 }
 function roomLaser(h, t){
   const R = ROOM, dz = t.z - h.z, tw = (RZ.wall - h.z)/dz;
@@ -3479,7 +3522,7 @@ function roomGrant(){
   R.got = true;
   progress.special = R.weapon; progress.rooms[L.id] = 'cleared'; saveProgress(); syncSpecialBtn();
   sfx.win(); R.flash = 0.6; musicStop();
-  R.banner = {t1:'YOU GOT IT!', t2:WEAPONS[R.weapon].name.toUpperCase(), t3:'Fire it with the special button. It\'s yours to keep!', life:3.4};
+  R.banner = {t1:'YOU GOT IT!', t2:WEAPONS[R.weapon].name.toUpperCase(), t3:R.weapon === 'saw' ? 'Hold the special button to rev it. It\'s yours to keep!' : 'Fire it with the special button. It\'s yours to keep!', life:3.4};
 }
 function roomHurt(){
   const R = ROOM; if (P.inv > 0 || R.phase === 'fail' || R.phase === 'out' || R.phase === 'treasure') return;
@@ -3703,7 +3746,17 @@ function drawNinjaBack(cx, fy, k, t, o){
   if (o.throwA > 0 || o.gun){
     // the throwing arm reaches up and forward, into the screen
     ctx.fillStyle = col.body; ctx.fillRect(8, -33, 4, 11); ctx.fillStyle = col.skin; ctx.fillRect(8, -36, 4, 3.5);
-    if (o.gun){ ctx.fillStyle = '#2b2b33'; ctx.fillRect(7, -39, 6, 4); ctx.fillStyle = o.gun; ctx.fillRect(6, -43, 8, 4.5); }
+    if (o.gun && o.gunId === 'saw'){
+      // the chainsaw held up and forward, the bar pointing down the hall
+      ctx.save(); ctx.translate((Math.random() - 0.5)*0.8, (Math.random() - 0.5)*0.8);
+      ctx.fillStyle = '#c9d3df'; ctx.fillRect(7.5, -64, 5, 22); ctx.beginPath(); ctx.arc(10, -64, 2.5, Math.PI, 0); ctx.fill();
+      const ph = (t*120) % 5; ctx.fillStyle = '#3a3a44';
+      for (let i = 0; i < 4; i++){ ctx.fillRect(5.6, -64 + ph + i*5, 1.9, 2.4); ctx.fillRect(12.5, -64 + (5 - ph) + i*5, 1.9, 2.4); }
+      ctx.fillStyle = o.gun; ctx.fillRect(4, -45, 12, 9); ctx.fillStyle = shade(o.gun, -0.35); ctx.fillRect(4, -38.5, 12, 2.5);
+      ctx.fillStyle = '#2b2b33'; ctx.fillRect(3, -42, 2, 5);
+      ctx.restore();
+    }
+    else if (o.gun){ ctx.fillStyle = '#2b2b33'; ctx.fillRect(7, -39, 6, 4); ctx.fillStyle = o.gun; ctx.fillRect(6, -43, 8, 4.5); }
   } else { ctx.fillStyle = col.body; ctx.fillRect(9, -23, 4, 11); ctx.fillStyle = col.skin; ctx.fillRect(9, -13, 4, 3); }
   ctx.fillStyle = col.hood; ctx.fillRect(-8, -37, 16, 13);
   ctx.fillStyle = shade(col.hood, -0.2); ctx.fillRect(-8, -26, 16, 2);
@@ -3906,14 +3959,14 @@ function roomDraw(){
     const qf = rp(q.rsx, 0, RZ.pz), qb = rp(q.rsx, q.rsy, RZ.pz), kq = qb.s*0.36/40;
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(qf.x, qf.y, qf.s*0.12, qf.s*0.032, 0, 0, 7); ctx.fill();
     ctx.save(); if (s.rd) ctx.globalAlpha = 0.35;
-    drawNinjaBack(qb.x, qb.y, kq, time, {col:peerCol(q), run:!!s.rr, throwA:s.rta ? 0.1 : 0, gun:s.rgn && WEAPONS[s.rgn] ? WEAPONS[s.rgn].col : null});
+    drawNinjaBack(qb.x, qb.y, kq, time, {col:peerCol(q), run:!!s.rr, throwA:s.rta ? 0.1 : 0, gun:s.rgn && WEAPONS[s.rgn] ? WEAPONS[s.rgn].col : null, gunId:s.rgn});
     ctx.restore();
     if (s.rsl >= 0){ ctx.lineCap = 'round'; ctx.strokeStyle = `rgba(255,255,255,${0.9 - s.rsl*0.6})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(qb.x, qb.y - 22*kq, qb.s*0.42, qb.s*0.14, 0, Math.PI*1.05, Math.PI*1.05 + Math.PI*0.9*Math.min(1, s.rsl*1.6)); ctx.stroke(); }
     drawPeerTag(q, qb.x, qb.y - 48*kq);
   }
   if (!(P.inv > 0 && Math.floor(time*16) % 2 === 0)){
     ctx.save(); if (R.meDown) ctx.globalAlpha = 0.35;
-    drawNinjaBack(pb.x, pb.y, k, time, {col:myCol(), run:p.run, throwA:p.throwA, gun:p.gunA > 0 && WEAPONS[progress.special] ? WEAPONS[progress.special].col : null});
+    drawNinjaBack(pb.x, pb.y, k, time, {col:myCol(), run:p.run, throwA:p.throwA, gun:p.gunA > 0 && WEAPONS[progress.special] ? WEAPONS[progress.special].col : null, gunId:progress.special});
     ctx.restore();
   }
   if (p.slash > 0){
@@ -4416,7 +4469,8 @@ function drawNinja(cx, y, face, col, run, throwA, t, opts){
     const la = opts.aim === undefined ? 0 : Math.atan2(Math.sin(opts.aim), Math.cos(opts.aim)*face);
     ctx.save(); ctx.translate(5, 14); ctx.rotate(la);
     ctx.fillRect(0, -2, 14, 4); ctx.fillStyle = col.skin; ctx.fillRect(13, -2.5, 4, 5);
-    if (opts.gun){ ctx.fillStyle = '#2b2b33'; ctx.fillRect(13, 0, 3, 5); ctx.fillStyle = opts.gun; ctx.fillRect(11, -4.5, 13, 5); ctx.fillStyle = '#ffffff'; ctx.fillRect(21, -3.5, 3, 3); }
+    if (opts.gun && opts.gunId === 'saw') drawSaw(opts.gun, t);
+    else if (opts.gun){ ctx.fillStyle = '#2b2b33'; ctx.fillRect(13, 0, 3, 5); ctx.fillStyle = opts.gun; ctx.fillRect(11, -4.5, 13, 5); ctx.fillStyle = '#ffffff'; ctx.fillRect(21, -3.5, 3, 3); }
     ctx.restore();
   }
   else if (cling){ ctx.fillRect(7, 1 + sw*0.5, 4, 12); ctx.fillStyle = col.skin; ctx.fillRect(7, -1 + sw*0.5, 4, 3); }
@@ -4440,6 +4494,30 @@ function drawNinja(cx, y, face, col, run, throwA, t, opts){
     ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(4 + Math.cos(a)*33, 13 + Math.sin(a)*33); ctx.stroke();
     ctx.fillStyle = col.skin; ctx.fillRect(hx-2, hy-2, 4, 4);
   }
+  ctx.restore();
+}
+/* a chainsaw held out along the arm (drawn in the arm's rotated frame, hand at x = 13): engine block,
+   a steel bar out to x = 51, and a chain whose teeth run forward along the top and back along the bottom */
+function drawSaw(col, t){
+  ctx.save(); ctx.translate((Math.random() - 0.5)*0.9, (Math.random() - 0.5)*0.9);
+  ctx.fillStyle = '#c9d3df'; ctx.fillRect(22, -3.5, 26, 6);
+  ctx.beginPath(); ctx.arc(48, -0.5, 3, -Math.PI/2, Math.PI/2); ctx.fill();
+  ctx.fillStyle = '#8d99a8'; ctx.fillRect(22, -1, 26, 1.2);
+  const ph = (t*150) % 5;
+  ctx.fillStyle = '#3a3a44';
+  for (let i = 0; i < 6; i++){
+    const xt = 22 + ph + i*5, xb = 22 + (5 - ph) + i*5;
+    if (xt < 48){ ctx.beginPath(); ctx.moveTo(xt, -3.5); ctx.lineTo(xt + 1.2, -5.8); ctx.lineTo(xt + 2.6, -3.5); ctx.fill(); }
+    if (xb < 48){ ctx.beginPath(); ctx.moveTo(xb, 2.5); ctx.lineTo(xb + 1.2, 4.8); ctx.lineTo(xb + 2.6, 2.5); ctx.fill(); }
+  }
+  ctx.fillStyle = '#2b2b33'; ctx.fillRect(12, -10, 8, 2.5); ctx.fillRect(12, -10, 2, 5);
+  ctx.fillStyle = col; ctx.fillRect(10, -6, 13, 10);
+  ctx.fillStyle = shade(col, -0.35); ctx.fillRect(10, 1.5, 13, 2.5); ctx.fillRect(20, -6, 3, 10);
+  ctx.fillStyle = shade(col, 0.35); ctx.fillRect(11, -5, 6, 1.5);
+  ctx.fillStyle = '#2b2b33'; ctx.fillRect(13, -3, 5, 3);
+  ctx.fillStyle = '#f7c51e'; ctx.fillRect(13, -2.5, 4, 5);
+  // a puff of exhaust now and then
+  if (Math.random() < 0.3){ ctx.fillStyle = 'rgba(200,200,210,0.5)'; ctx.beginPath(); ctx.arc(8 - Math.random()*4, -7 - Math.random()*4, 2 + Math.random()*2, 0, 7); ctx.fill(); }
   ctx.restore();
 }
 const PLAYER_COL = {leg:'#163a6b', body:'#1d6fd0', belt:'#151515', trim:'#f7c51e', hood:'#1d6fd0', skin:'#f7c51e'};
@@ -4980,7 +5058,7 @@ function draw(){
       const rot = P.flip > 0 ? (1 - P.flip/0.4) * Math.PI * 2 : 0;
       if (!blink) drawNinja(P.x + P.w/2, P.y + (P.sink || 0), df, myCol(), P.run || P.climbing, P.throwA, time,
         {scarf:'#d22b2b', sword:true, slash: P.slash > 0 ? 1 - P.slash/0.2 : -1, cling: P.cling, rot, aim: P.throwAng,
-         gun: P.gunA > 0 && WEAPONS[progress.special] ? WEAPONS[progress.special].col : null});
+         gun: P.gunA > 0 && WEAPONS[progress.special] ? WEAPONS[progress.special].col : null, gunId: progress.special});
     }
   }
   for (const p of puffs){
@@ -5952,7 +6030,7 @@ function drawGhosts(){
     const rot = s.sp > 0 ? (1 - s.sp/SPIN)*Math.PI*4 : s.fl > 0 ? (1 - s.fl/0.4)*Math.PI*2 : 0;
     const face = s.sl >= 0 ? s.sf : (s.cl && !s.ta ? s.cl : s.f);
     drawNinja(g.x + 11, g.y, face || 1, peerCol(p), !!s.r, s.ta ? 0.1 : 0, time,
-      {scarf:'#d22b2b', sword:true, slash:s.sp > 0 ? 0.55 : s.sl, cling:s.cl, rot, aim:s.ag, gun:s.gn && WEAPONS[s.gn] ? WEAPONS[s.gn].col : null});
+      {scarf:'#d22b2b', sword:true, slash:s.sp > 0 ? 0.55 : s.sl, cling:s.cl, rot, aim:s.ag, gun:s.gn && WEAPONS[s.gn] ? WEAPONS[s.gn].col : null, gunId:s.gn});
     ctx.restore();
     drawPeerTag(p, g.x + 11, g.y - 16);
   }

@@ -47,7 +47,7 @@ Up to four ninjas can play the same world at once, each on their own phone, tabl
 
 ## Secret doors and special weapons
 
-Five worlds hide a secret door: a cracked bit of old wall standing in the background on one stretch of ground. Hit it with the sword, a star, a stomp or a special weapon and it crumbles into a glowing doorway. Press ↑ (or tap the door) to go in.
+Six worlds hide a secret door: a cracked bit of old wall standing in the background on one stretch of ground. Hit it with the sword, a star, a stomp or a special weapon and it crumbles into a glowing doorway. Press ↑ (or tap the door) to go in.
 
 Inside is a corridor room seen from behind the ninja, like the base stages in Contra. Slide left and right, jump and double jump, throw stars down the hall (they aim at whatever you tap, or at the nearest target in your lane), and swing the sword to knock enemy stars out of the air. Each room has three gates. Lantern turrets on the back wall shield the core; knock them all out, smash the core and the wall falls. Grunts run out of side doors, and from the second gate on, spiked balls roll at your feet. Behind the third gate is the treasure: a weapon you can't get anywhere else.
 
@@ -55,6 +55,7 @@ Inside is a corridor room seen from behind the ninja, like the base stages in Co
 | --- | --- | --- |
 | Sunset Temple | Spread Stars | Five energy stars in a fan |
 | Bamboo Grove | Heat-Seeker Missiles | Homes in on the nearest bad guy and explodes |
+| Frozen Peak | Chainsaw | Hold to rev it: the blade shreds anything it touches, cuts enemy shots out of the air and grinds bosses down fast, but only up close (an idea from Everett) |
 | Lava Volcano | Dragon Flame | A short-range flamethrower, hold to keep it going |
 | Desert Ruins | Laser Gun | An instant beam that goes through everything in a line |
 | Cloud Castle | Thunder Chain | Lightning that jumps between up to four enemies |
@@ -88,7 +89,7 @@ The adaptive difficulty below still tunes the bad guys' speed to your win rate, 
 Bosses are built to be a real fight:
 
 - They have nearly twice their old health, more again with each extra player online, and up to 40% more by the last world.
-- Big hits do half damage to a boss: the sword, stomps, missiles, the laser and the thunder chain all hit a boss for half (at least 1). After each hit, a boss is armoured for a split second (a fifth of a second, shared between players online), so firing everything at once doesn't melt it.
+- Big hits do half damage to a boss: the sword, stomps, missiles, the laser and the thunder chain all hit a boss for half (at least 1). The chainsaw bites for 1 each time the armour drops, so it's the fastest way to wear a boss down if you dare get that close. After each hit, a boss is armoured for a split second (a fifth of a second, shared between players online), so firing everything at once doesn't melt it.
 - A boss can only be stomped once every 1.4 seconds, so you can't bounce on its head forever.
 - Bosses speed up as they weaken, up to about 40% faster near the end of the fight.
 - Get knocked out in a boss fight (playing alone) and the boss gets all its health back; **Keep going** puts you at the edge of the arena to fight it again.
