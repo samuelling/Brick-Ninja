@@ -2,7 +2,7 @@
 
 A side-scrolling ninja game built from bricks. Game idea by Everett.
 
-A wandering ninja comes to the village of Ishimura, where the Shadow Master has cut the Sun Lantern into twelve shards and handed them to his twelve guardians. Fight, climb, race and ride through twelve worlds, beat each guardian, and bring the light home. The story is told Kurosawa-style: black-and-white storms, hard wipes between shots, taiko drums, and an ending that turns the whole village back to color.
+A wandering ninja comes to the village of Ishimura, where the Shadow Master has cut the Sun Lantern into twelve shards and handed them to his twelve guardians. Fight, climb, race and ride through twelve worlds, beat each guardian, and bring the light home. Then saddle up a dragon for the bonus world, a side-scrolling shooter. The story is told Kurosawa-style: black-and-white storms, hard wipes between shots, taiko drums, and an ending that turns the whole village back to color.
 
 **Play:** https://samuelling.github.io/Brick-Ninja/
 
@@ -21,6 +21,8 @@ The whole game is one file, `index.html`, with no build step. It runs on phones 
 | Ninja stars | Star button, or touch where you want them to go | X or K, or click where you want them to go |
 | Aim | Point the d-pad in any of eight directions, or touch and hold the game | Hold ↑ or ↓ (with ← → for diagonals) while throwing |
 | Special weapon | Special button (hold to keep firing) | C or L |
+| Switch element | Element button (tap) | Q (tap) |
+| Element super | Element button (hold, when the meter is full) | Hold Q, or E |
 | Go through a secret door | D-pad ▲, or tap the door | ↑ |
 | Pause | II | P or Esc |
 | Music on/off | Title or pause screen | M |
@@ -28,6 +30,47 @@ The whole game is one file, `index.html`, with no build step. It runs on phones 
 Landing on a bad guy smashes it and bounces you off in a spinning sword slash that hits anything nearby. Landing on a boss knocks off a point of health (once every 1.4 seconds). Golden bricks give triple stars for a while.
 
 **In the race (four laps):** ◀ ▶ steer and the kart speeds up by itself. JUMP hops over trouble, stars spin out the karts ahead, and the sword or special button uses turbo. Studs on the road refill the turbo meter.
+
+## Elemental powers (an idea from Everett)
+
+Every world hides a glowing element orb a little way in. Grab one and your ninja stars and sword carry that element:
+
+| Element | Found in | What it does |
+| --- | --- | --- |
+| Fire | Sunset Temple, Lava Volcano | Every hit splashes flame on anything close, and the bad guy keeps burning for a couple of seconds |
+| Ice | Frozen Peak, Coral Reef, Moon Palace | Freezes bad guys into blocks of ice you can stand on (even birds, in mid-air). Hit a frozen one again and it shatters. Bosses slow down instead |
+| Thunder | Cloud Castle, Shadow Express, Shadow Fortress | Every hit arcs on to the two nearest bad guys |
+| Wind | Bamboo Grove, Desert Ruins, Dragon Falls | Stars fly faster and slice straight through everything in a line, and the sword throws a blade of wind |
+
+Orbs are yours for good (saved in the browser). Tap the element button (Q) to switch between the ones you've found; the sword's slash, your stars and the badge next to your hearts change colour to match. Beating bad guys fills the ring around the badge. When it's full, the button glows: hold it (or press E) for a super that hits everything on screen:
+
+- **Fire Storm**: a ring of fire bursts out from you, and everything on screen burns.
+- **Blizzard**: everything on screen freezes solid for longer than usual, and enemy shots vanish.
+- **Thunder Storm**: lightning comes down on every bad guy on screen.
+- **Tornado**: a tornado tears across the screen, flinging bad guys and shots away.
+
+Online, the world's authority runs burning and freezing, so everyone sees the same ice blocks.
+
+## Bonus world: Dragon Sky
+
+A side-scrolling shooter in the R-Type mould (an idea from Everett). A brick dragon answers the ninja's call, and the screen scrolls by itself through five stretches of sky: **the Cloud Sea**, **Dragon's Teeth** (a canyon with turrets on the floor and roof, spires and drifting boulders), **the Black Galleon** (fly along a sky warship's deck, past its towers and turrets, and smash the engine core at the stern), **Storm Front** (watch for gathering clouds: lightning comes down where they flash) and **the Gate of the Wyrm**.
+
+| Action | Touch | Keyboard |
+| --- | --- | --- |
+| Fly | D-pad, all eight directions | Arrows or WASD |
+| Stars | Star button (hold to keep firing), or touch where to aim | X or K |
+| Dragon's breath | Hold the sword button to charge, let go to fire (a quick tap is a slash) | Hold Z or J |
+| Send out / call back the pearl | JUMP | Space |
+| Special weapon | Special button | C or L |
+| Element / super | Element button | Q, E |
+
+- **The breath** is the wave cannon: the BREATH gauge under your hearts fills in three steps, and the bigger the breath, the more it hurts and the more it pierces (a full one goes through rock). It carries your element.
+- **The pearl** is the Force: it rides on the dragon's nose, eats enemy shots and grinds anything it touches. JUMP flings it out ahead to fight on its own; JUMP again calls it home. It fires with your element: fire fans out three bolts, ice shards bounce off walls and the edges of the screen, thunder zaps the nearest bad guy, and wind blades curve in on their own.
+- **Lantern carriers** (the paper lanterns with a ?) drop power-ups when you smash them: element orbs (all four can be found here), **S** for speed, **baby dragons** (up to two fly above and below you, block shots and fire with you), and hearts.
+- Bumping into rock costs a heart and pushes you clear. Fall to zero hearts and **Keep going** puts you back on the left of the screen.
+- **The Iron Wyrm**, a giant armoured sky serpent, waits at the end. Its body is iron: shots clank off it, except for four red gems that break for a big hit. Its head is the real target. It snakes about in a figure eight, breathes fans of fire, and its gems shoot at you; once it's hurt it gets faster, sheds homing iron scales, and lines up on you (watch for the red stripe) before dashing across the screen.
+
+Dragon Sky is flown on your own, like Thunder Road. Its music is a B-minor power-metal flight.
 
 ## World 9: Dragon Falls
 
@@ -122,9 +165,10 @@ New mechanics build up as the game goes on.
 | 10 | Moon Palace | Low gravity, meteor showers, very wide gaps | Mochi Rabbit | Bright NES |
 | 11 | Shadow Express | The screen scrolls by itself along a speeding train; live wires overhead | Kabuto Gunship | Power metal |
 | 12 | Shadow Fortress | Darkness, spikes, crushers, elevators | Shadow Master | Power metal |
+| ★ | Dragon Sky (bonus) | A side-scrolling shooter on dragonback | Iron Wyrm | Power metal |
 
 All the music is original and synthesized in the browser. Every world is open from the start. Cleared worlds and the story progress are saved in the browser.
 
 ## Making changes
 
-Open `index.html` in a browser to play locally. Worlds are defined in the `LEVELS` array (the vertical one is built by `buildVertical()`), bosses in `BOSS`, songs in `SONGS`, the race in `initRace()` and `buildTrack()`, the story scenes in `makeIntro()`, `chapterScene()` and `makeEnding()`, the secret doors and their weapons in `SECRETS` and `WEAPONS`, and the corridor rooms in `roomGate()`, `roomUpdate()` and `roomDraw()`. All art is drawn in code on a canvas, so there are no asset files.
+Open `index.html` in a browser to play locally. Worlds are defined in the `LEVELS` array (the vertical one is built by `buildVertical()`), bosses in `BOSS`, songs in `SONGS`, the race in `initRace()` and `buildTrack()`, the story scenes in `makeIntro()`, `chapterScene()` and `makeEnding()`, the secret doors and their weapons in `SECRETS` and `WEAPONS`, the corridor rooms in `roomGate()`, `roomUpdate()` and `roomDraw()`, the elements in `ELEMENTS`, `elemStrike()`, `applyElem()` and `elemSuper()`, and Dragon Sky in `initFlight()` (terrain and enemy waves), `flightUpdate()`, `flightDraw()` and `BOSS.wyrm`. All art is drawn in code on a canvas, so there are no asset files.
