@@ -6,7 +6,7 @@ A wandering ninja comes to the village of Ishimura, where the Shadow Master has 
 
 **Play:** https://samuelling.github.io/Brick-Ninja/
 
-The whole game is one file, `index.html`, with no build step. It runs on phones (touch buttons and an 8-way d-pad) and computers (keyboard and mouse). Double-tap and pinch zoom are turned off, so quick taps on the buttons never zoom the page in Safari.
+The whole game is one file, `index.html`, with no build step. It runs on phones (touch buttons and an 8-way d-pad) and computers (keyboard and mouse). Double-tap and pinch zoom are turned off, so quick taps on the buttons never zoom the page in Safari. On a computer, a panel of the keys to press appears for a few seconds when each world (or secret room) starts, matched to that kind of world, and the pause screen lists them all with tips.
 
 ## Controls
 
