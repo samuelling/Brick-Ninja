@@ -1386,7 +1386,7 @@ function buildVertical(){
 let state = 'title', P, studCount = 0, camX = 0, shake = 0, winTimer = 0, time = 0, bannerT = 0;
 let stars = [], foes = [], debris = [], pops = [], puffs = [], shots = [], beams = [], shardFx = null;
 let ROOM = null; // the secret corridor room, while you're inside one
-const NET = {ws:null, on:false, code:'', id:null, n:0, name:'', peers:new Map(), gen:0, levelNP:1, teamD:null, remote:false, trialFromPeer:false, stT:0, wT:0, rwT:0, pingT:null, status:'', cid:0};
+const NET = {sent:0, lastSt:null, lastKey:null, lastStT:0, ws:null, on:false, code:'', id:null, n:0, name:'', peers:new Map(), gen:0, levelNP:1, teamD:null, remote:false, trialFromPeer:false, stT:0, wT:0, rwT:0, pingT:null, status:'', cid:0};
 function newPlayer(){ return {x:60,y:GROUND-34,w:22,h:34,vx:0,vy:0,face:1,onG:false,hp:5,inv:0,cd:0,scd:0,throwA:0,slash:0,slashFace:1,slashHit:null,triple:0,coyote:0,airJumps:1,flip:0,spin:0,spinHit:null,wcd:0,gunA:0,elMeter:0,spLatch:false,upLatch:false,cling:0,climbing:false,wjT:0,safeX:60,safeY:GROUND-34,run:false}; }
 function loadLevel(i){
   LI = i; L = LEVELS[i]; MUS = L.music;
@@ -1890,7 +1890,7 @@ function hitSecret(box){
 function revealSecret(sc){
   {
     sc.st = 'open'; sc.pop = 0.6;
-    if (!NET.remote && NET.on && NET.peers.size) netEv({k:'sec', gen:NET.gen, i:secrets.indexOf(sc)});
+    if (!NET.remote && NET.on && worldPeers()) netEv({k:'sec', gen:NET.gen, i:secrets.indexOf(sc)});
     if (!progress.rooms[L.id]){ progress.rooms[L.id] = 'found'; saveProgress(); }
     burst(sc.x + sc.w/2, sc.y - sc.h/2, [L.wall[0], L.wall[1], L.pillar[1]], 22, 1);
     pops.push({x:sc.x + sc.w/2, y:sc.y - sc.h - 14, txt:'SECRET DOOR!', life:1.8});
@@ -4695,7 +4695,7 @@ function enterRoom(sc, remote){
   ROOM.banner = {t1:'SECRET ROOM!', t2:'Break all 3 gates to win the treasure', life:3};
   showKeyHint('SECRET ROOM CONTROLS');
   sfx.door(); musicPlay('boss', true);
-  if (!remote && NET.on && NET.peers.size) netEv({k:'room', gen:NET.gen, i:secrets.indexOf(sc)});
+  if (!remote && NET.on && worldPeers()) netEv({k:'room', gen:NET.gen, i:secrets.indexOf(sc)});
 }
 function roomGate(i){
   const R = ROOM; R.gate = i; R.wallUp = true; R.ents = []; R.eshots = [];
@@ -4733,7 +4733,7 @@ function roomShot(kind, h, t, sp){
   const T = Math.max(0.05, (t.z - h.z)/sp);
   return {kind, x:h.x, y:h.y, z:h.z, vx:(t.x - h.x)/T, vy:(t.y - h.y)/T, vz:sp, rot:0, life:2, hit:new Set()};
 }
-const netRoomFx = e => { if (NET.on && NET.peers.size) netEv(Object.assign({k:'rfx', gen:NET.gen}, e)); };
+const netRoomFx = e => { if (NET.on && roomPeers()) netEv(Object.assign({k:'rfx', gen:NET.gen}, e)); };
 const v3 = s => [r3(s.vx), r3(s.vy), r3(s.vz)], h3 = h => [r3(h.x), r3(h.y), r3(h.z)];
 function roomThrow(){
   const R = ROOM, h = roomHand(), t = roomAim(), s = roomShot('star', h, t, 6);
@@ -4869,7 +4869,7 @@ function roomEShot(kind, x, y, z, sp){
   const p = tg.length ? tg[Math.floor(Math.random()*tg.length)] : ROOM.p, T = Math.max(0.2, (z - RZ.pz)/sp);
   const f = {kind, x, y, z, vx:(p.x - x)/T, vy:(p.y + 0.2 - y)/T, vz:-sp, r:kind === 'fire' ? 0.07 : 0.06, rot:0};
   ROOM.eshots.push(f);
-  if (NET.on && NET.peers.size) netEv({k:'re', gen:NET.gen, kind, x:r3(x), y:r3(y), z:r3(z), vx:r3(f.vx), vy:r3(f.vy), vz:r3(f.vz)});
+  if (NET.on && roomPeers()) netEv({k:'re', gen:NET.gen, kind, x:r3(x), y:r3(y), z:r3(z), vx:r3(f.vx), vy:r3(f.vy), vz:r3(f.vz)});
 }
 function exitRoom(ok){
   const R = ROOM, sc = R.sc; ROOM = null;
@@ -7099,9 +7099,13 @@ function nearestOf(list, e){
   for (const q of list){ const d = Math.abs(q.x + 11 - ex) + Math.abs(q.y + 17 - ey)*0.6; if (d < bd){ bd = d; best = q; } }
   return best;
 }
-function netSend(o){ const ws = NET.ws; if (ws && ws.readyState === 1){ const s = JSON.stringify(o); if (s.length <= 2000) ws.send(s); } }
+function netSend(o){ const ws = NET.ws; if (ws && ws.readyState === 1){ const s = JSON.stringify(o); if (s.length <= 2000){ ws.send(s); NET.sent++; } } }
+/* The relay counts every message it receives against a daily allowance, so only send what a friend will read:
+   is anyone else in this world (or this secret room) right now? */
+const worldPeers = () => { for (const p of NET.peers.values()) if (levelPeer(p)) return true; return false; };
+const roomPeers = () => { for (const p of NET.peers.values()) if (roomPeer(p)) return true; return false; };
 const netEv = (e, to) => netSend(to ? {t:'ev', e, to} : {t:'ev', e});
-const netFx = e => { if (NET.on && NET.peers.size) netEv(Object.assign({k:'fx', gen:NET.gen, lv:LI}, e)); };
+const netFx = e => { if (NET.on && worldPeers()) netEv(Object.assign({k:'fx', gen:NET.gen, lv:LI}, e)); };
 const r2 = v => Math.round(v*100)/100, r3 = v => Math.round(v*1000)/1000;
 
 function setNetStatus(t){ NET.status = t; const el = document.getElementById('netStatus'); if (el) el.textContent = t; }
@@ -7128,7 +7132,7 @@ function netConnect(code){
     syncNetUI();
   };
 }
-function netReset(){ clearInterval(NET.pingT); NET.ws = null; NET.on = false; NET.id = null; NET.peers.clear(); NET.teamD = null; }
+function netReset(){ clearInterval(NET.pingT); NET.lastSt = NET.lastKey = null; NET.ws = null; NET.on = false; NET.id = null; NET.peers.clear(); NET.teamD = null; }
 function netLeave(silent){
   const ws = NET.ws; NET.ws = null;
   if (ws){ try { ws.close(1000, 'bye'); } catch(_){} }
@@ -7149,6 +7153,7 @@ function netOnMsg(m){
   if (m.t === 'join'){
     const p = {id:m.id, n:m.n, name:m.name || 'Ninja', st:m.st, g:null};
     NET.peers.set(m.id, p); setNetStatus(''); syncNetUI(); showToast(`${p.name} joined!`); sfx.power();
+    NET.lastSt = NET.lastKey = null; NET.stT = 0;
     // already playing a world? bring the new ninja straight in
     if (inLevelState() && amAuth()){
       netEv({k:'level', i:LI, cut:false, late:true, np:NET.levelNP, D:NET.teamD == null ? effD() : NET.teamD, gen:NET.gen}, m.id);
@@ -7158,7 +7163,7 @@ function netOnMsg(m){
   }
   if (m.t === 'name'){ const p = NET.peers.get(m.id); if (p){ p.name = m.name; syncNetUI(); } return; }
   if (m.t === 'leave'){ const p = NET.peers.get(m.id); NET.peers.delete(m.id); if (p) showToast(`${p.name} left`); syncNetUI(); return; }
-  if (m.t === 'st'){ const p = NET.peers.get(m.id); if (p){ p.st = m.s; netGhost(p); } return; }
+  if (m.t === 'st'){ const p = NET.peers.get(m.id); if (p){ const was = levelPeer(p); p.st = m.s; netGhost(p); if (!was && levelPeer(p)){ NET.lastSt = NET.lastKey = null; NET.stT = 0; } } return; }
   if (m.t === 'ev'){ const p = NET.peers.get(m.id); if (p && m.e && typeof m.e === 'object') netOnEv(p, m.e); }
 }
 function netGhost(p){
@@ -7303,11 +7308,21 @@ function netTick(dt){
   P.flameT = Math.max(0, (P.flameT || 0) - dt);
   if (ROOM) ROOM.p.flameT = Math.max(0, (ROOM.p.flameT || 0) - dt);
   if (amAuth() && NET.peers.size) NET.teamD = r3(effD());
+  // Your ninja's state. With a friend in the same world: up to 15 a second, but an unchanged state (standing
+  // still, paused) is sent only once a second. Otherwise only where you are matters (which world, in a room or
+  // not), so it's sent when that changes, plus every 3 seconds if anyone else is in the room. Alone: next to nothing.
   NET.stT -= dt;
-  if (NET.stT <= 0){ NET.stT = 1/15; netSend({t:'st', s:netMyState()}); }
-  if (!NET.peers.size || !inLevelState() || !amAuth()) return;
-  if (ROOM){ NET.rwT -= dt; if (NET.rwT <= 0){ NET.rwT = 0.1; netRoomSnap(); } }
-  else if (!L.race && !L.flight){ NET.wT -= dt; if (NET.wT <= 0){ NET.wT = 0.1; netWorldSnap(); } }
+  if (NET.stT <= 0){
+    NET.stT = 1/15;
+    const st = netMyState(), json = JSON.stringify(st), key = `${st.gen}|${st.lv}|${st.il}|${st.rm}|${st.dn}`, now = performance.now()/1000;
+    const send = inLevelState() && worldPeers() ? json !== NET.lastSt || now - NET.lastStT >= 1
+      : key !== NET.lastKey || (NET.peers.size > 0 && now - NET.lastStT >= 3);
+    if (send){ netSend({t:'st', s:st}); NET.lastSt = json; NET.lastKey = key; NET.lastStT = now; }
+  }
+  // the authority's snapshots go out only while a friend is in this world (or this secret room)
+  if (!inLevelState() || !amAuth()) return;
+  if (ROOM){ if (roomPeers()){ NET.rwT -= dt; if (NET.rwT <= 0){ NET.rwT = 0.1; netRoomSnap(); } } }
+  else if (!L.race && !L.flight && worldPeers()){ NET.wT -= dt; if (NET.wT <= 0){ NET.wT = 0.1; netWorldSnap(); } }
 }
 /* -- friends' shots, replayed here just for show (their hits reach the authority separately) -- */
 function netFxSpawn(e){
