@@ -2,6 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+/* iPad audio helper (added for the Everett Games console):
+   - asks iOS for "playback" audio so the silent switch / silent mode doesn't mute the game
+   - iOS can pause web audio (after speech, app switching, a call...); every touch wakes it back up,
+     except contexts the game paused on purpose (its own suspend(), e.g. a pause screen). */
+(function () {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  var Orig = window.AudioContext || window.webkitAudioContext;
+  if (!Orig) return;
+  var ctxs = window.__evgAudio = [];
+  function Tracked(opts) {
+    var c = opts ? new Orig(opts) : new Orig();
+    var sus = c.suspend, res = c.resume;
+    c.suspend = function () { c.__held = true; return sus.apply(c, arguments); };
+    c.resume = function () { c.__held = false; return res.apply(c, arguments); };
+    c.__res = res;
+    ctxs.push(c);
+    return c;
+  }
+  Tracked.prototype = Orig.prototype;
+  window.AudioContext = Tracked;
+  if (window.webkitAudioContext) window.webkitAudioContext = Tracked;
+  function wake() {
+    for (var i = 0; i < ctxs.length; i++) {
+      var c = ctxs[i];
+      if (!c.__held && c.state !== 'running' && c.state !== 'closed') { try { c.__res.call(c); } catch (e) {} }
+    }
+  }
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(function (t) { window.addEventListener(t, wake, { capture: true, passive: true }); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) wake(); });
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1c1442">
 <meta name="apple-mobile-web-app-capable" content="yes">
